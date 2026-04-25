@@ -24,8 +24,8 @@ const FILTERS = [
 
 function EquipmentsPage() {
   const { data: equipment } = useSuspenseQuery(equipmentQueries.list())
-  const [search,        setSearch]        = useState('')
-  const [filter,        setFilter]        = useState('all')
+  const [search,          setSearch]          = useState('')
+  const [filter,          setFilter]          = useState('all')
   const [showNewModal,    setShowNewModal]    = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [qrEquipment,     setQrEquipment]     = useState<EquipmentWithCheckout | null>(null)
@@ -39,63 +39,96 @@ function EquipmentsPage() {
 
   return (
     <div className="animate-[fadeIn_0.3s_ease]">
+      {/* Header */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="mb-1 font-['Space_Grotesk'] text-[22px] font-semibold text-[#e6edf3]">
+          <h1
+            className="mb-1 text-[22px] font-bold"
+            style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#eef2ff', letterSpacing: '-0.3px' }}
+          >
             Equipamentos
           </h1>
-          <p className="text-[13px] text-[#6e7681]">{equipment.length} itens cadastrados</p>
+          <p className="text-[13px]" style={{ color: '#3b5a7a' }}>
+            {equipment.length} itens cadastrados
+          </p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setShowImportModal(true)}
-            className="rounded-md border border-white/10 px-4 py-2 text-[13px] font-medium text-[#8b949e] transition-colors hover:text-[#e6edf3]"
+            className="rounded-lg px-4 py-2 text-[13px] font-medium transition-colors"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#8ba4bf' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#eef2ff')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#8ba4bf')}
           >
             ↑ Excel
           </button>
           <button
             onClick={() => setShowNewModal(true)}
-            className="rounded-md bg-[#1f6feb] px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-[#388bfd]"
+            className="rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all"
+            style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 16px rgba(37,99,235,0.3)' }}
           >
             + Novo equipamento
           </button>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Search + Filters */}
       <div className="mb-4 flex flex-wrap gap-2">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar equipamento..."
-          className="min-w-[160px] flex-1 rounded-md border border-white/10 bg-[#161b22] px-3 py-2 text-[13px] text-[#e6edf3] placeholder-[#6e7681] outline-none focus:border-[#58a6ff]"
+          className="min-w-[160px] flex-1 rounded-lg px-3 py-2 text-[13px] outline-none transition-all"
+          style={{ background: '#060c1a', border: '1px solid rgba(255,255,255,0.07)', color: '#eef2ff' }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
+          onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)')}
         />
         {FILTERS.map(([v, l]) => (
           <button
             key={v}
             onClick={() => setFilter(v)}
-            className={`rounded-md px-3.5 py-1.5 text-[12px] font-medium transition-all ${
+            className="rounded-lg px-3.5 py-1.5 text-[12px] font-medium transition-all"
+            style={
               filter === v
-                ? 'bg-[#1f6feb] text-white'
-                : 'border border-white/10 text-[#8b949e] hover:text-[#e6edf3]'
-            }`}
+                ? { background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', color: '#fff' }
+                : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#8ba4bf' }
+            }
           >
             {l}
           </button>
         ))}
       </div>
 
-      {/* Grid */}
+      {/* Table */}
       {filtered.length === 0 ? (
-        <div className="py-10 text-center text-[13px] text-[#6e7681]">
+        <div
+          className="rounded-xl py-10 text-center text-[13px]"
+          style={{ background: '#0a0f1d', border: '1px solid rgba(255,255,255,0.05)', color: '#2b4266' }}
+        >
           Nenhum equipamento encontrado
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(195px,1fr))]">
-          {filtered.map((eq) => (
-            <EquipCard
+        <div className="overflow-hidden rounded-xl" style={{ background: '#0a0f1d', border: '1px solid rgba(255,255,255,0.05)' }}>
+          {/* Column headers — desktop only */}
+          <div
+            className="hidden sm:grid px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider"
+            style={{
+              gridTemplateColumns: '1fr 140px 110px 130px 96px',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              color: '#2b4266',
+            }}
+          >
+            <div>Equipamento</div>
+            <div>Categoria</div>
+            <div>Status</div>
+            <div>Serial / Valor</div>
+            <div className="text-right">Ações</div>
+          </div>
+          {filtered.map((eq, i) => (
+            <EquipRow
               key={eq.id}
               eq={eq}
+              isLast={i === filtered.length - 1}
               onShowQR={() => setQrEquipment(eq)}
               onEdit={() => setEditEquipment(eq)}
             />
@@ -105,99 +138,151 @@ function EquipmentsPage() {
 
       {showNewModal    && <NewEquipModal onClose={() => setShowNewModal(false)} />}
       {showImportModal && <ImportExcelModal type="equipment" onClose={() => setShowImportModal(false)} />}
-      {editEquipment && (
-        <EditEquipModal
-          equipment={editEquipment}
-          onClose={() => setEditEquipment(null)}
-        />
-      )}
-      {qrEquipment && (
-        <EquipQRModal
-          equipment={qrEquipment}
-          onClose={() => setQrEquipment(null)}
-        />
-      )}
+      {editEquipment   && <EditEquipModal equipment={editEquipment} onClose={() => setEditEquipment(null)} />}
+      {qrEquipment     && <EquipQRModal equipment={qrEquipment} onClose={() => setQrEquipment(null)} />}
     </div>
   )
 }
 
-function EquipCard({
+function EquipRow({
   eq,
+  isLast,
   onShowQR,
   onEdit,
 }: {
   eq: EquipmentWithCheckout
+  isLast: boolean
   onShowQR: () => void
   onEdit: () => void
 }) {
   const icon = CAT_ICON[eq.category] ?? '📦'
-  const deleteMutation = useDeleteEquipmentMutation()
+  const deleteMutation  = useDeleteEquipmentMutation()
   const restoreMutation = useSetAvailableMutation()
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!confirm(`Remover "${eq.name}"? Esta ação não pode ser desfeita.`)) return
-    deleteMutation.mutate(eq.id)
-  }
-
-  const handleRestore = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    restoreMutation.mutate(eq.id)
-  }
-
   return (
-    <div className="group rounded-lg border border-white/10 bg-[#161b22] p-[14px] transition-all hover:border-white/20 hover:bg-[#21262d]">
-      <div className="mb-2.5 flex items-start justify-between gap-1">
-        {eq.photoUrl ? (
-          <img src={eq.photoUrl} alt={eq.name} className="h-9 w-9 rounded-md object-cover" />
-        ) : (
-          <div className="text-[22px]">{icon}</div>
-        )}
-        <div className="flex items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
-          {eq.status === 'maintenance' && (
-            <button
-              onClick={handleRestore}
-              title="Marcar como disponível"
-              disabled={restoreMutation.isPending}
-              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#3fb950] hover:bg-[#3fb950]/10"
-            >
-              ✓
-            </button>
-          )}
-          {eq.status !== 'in-use' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onEdit() }}
-              title="Editar"
-              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#6e7681] hover:bg-white/10 hover:text-[#8b949e]"
-            >
-              ✎
-            </button>
-          )}
-          <button
-            onClick={onShowQR}
-            title="Ver QR Code"
-            className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#6e7681] hover:bg-white/10 hover:text-[#8b949e]"
-          >
-            QR
-          </button>
-          {eq.status === 'available' && (
-            <button
-              onClick={handleDelete}
-              title="Excluir"
-              disabled={deleteMutation.isPending}
-              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#6e7681] hover:bg-[#f85149]/10 hover:text-[#f85149]"
-            >
-              ✕
-            </button>
+    <div
+      className="group flex items-center gap-3 px-4 py-3 transition-colors sm:grid sm:items-center"
+      style={{
+        borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.04)',
+        gridTemplateColumns: '1fr 140px 110px 130px 96px',
+      }}
+      onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.015)')}
+      onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = 'transparent')}
+    >
+      {/* 1. Name + icon */}
+      <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[15px]"
+          style={{ background: '#0e1628', border: '1px solid rgba(255,255,255,0.06)' }}
+        >
+          {eq.photoUrl ? (
+            <img src={eq.photoUrl} alt={eq.name} className="h-full w-full rounded-lg object-cover" />
+          ) : (
+            icon
           )}
         </div>
+        <div className="min-w-0">
+          <div className="truncate text-[13px] font-medium" style={{ color: '#d6e4f0' }}>
+            {eq.name}
+          </div>
+          <div className="text-[11px] sm:hidden" style={{ color: '#3b5a7a' }}>{eq.category}</div>
+        </div>
       </div>
-      <div className="mb-0.5 font-['Space_Grotesk'] text-[13px] font-semibold leading-tight text-[#e6edf3]">
-        {eq.name}
+
+      {/* 2. Categoria — desktop */}
+      <div className="hidden sm:block text-[12px]" style={{ color: '#4a6380' }}>
+        {eq.category}
       </div>
-      <div className="mb-2 text-[11px] text-[#6e7681]">{eq.category}</div>
-      <div className="mb-2.5 font-['JetBrains_Mono'] text-[12px] text-[#8b949e]">{eq.value}</div>
-      <StatusBadge status={eq.status as 'available' | 'in-use' | 'maintenance'} />
+
+      {/* 3. Status — mobile (ml-auto) + desktop (grid cell) */}
+      <div className="ml-auto sm:ml-0">
+        <StatusBadge status={eq.status as 'available' | 'in-use' | 'maintenance'} />
+      </div>
+
+      {/* 4. Serial / Valor — desktop */}
+      <div
+        className="hidden sm:block text-[11px]"
+        style={{ fontFamily: "'JetBrains Mono', monospace", color: '#3b5a7a' }}
+      >
+        {eq.value}
+      </div>
+
+      {/* 5. Ações — desktop */}
+      <div className="hidden sm:flex items-center justify-end gap-1">
+        {eq.status === 'maintenance' && (
+          <ActionBtn
+            title="Marcar como disponível"
+            disabled={restoreMutation.isPending}
+            onClick={(e) => { e.stopPropagation(); restoreMutation.mutate(eq.id) }}
+            hoverColor="#10b981"
+            hoverBg="rgba(16,185,129,0.1)"
+          >
+            ✓
+          </ActionBtn>
+        )}
+        {eq.status !== 'in-use' && (
+          <ActionBtn
+            title="Editar"
+            onClick={(e) => { e.stopPropagation(); onEdit() }}
+          >
+            ✎
+          </ActionBtn>
+        )}
+        <ActionBtn title="Ver QR Code" onClick={onShowQR}>
+          QR
+        </ActionBtn>
+        {eq.status === 'available' && (
+          <ActionBtn
+            title="Excluir"
+            disabled={deleteMutation.isPending}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (!confirm(`Remover "${eq.name}"? Esta ação não pode ser desfeita.`)) return
+              deleteMutation.mutate(eq.id)
+            }}
+            hoverColor="#ef4444"
+            hoverBg="rgba(239,68,68,0.1)"
+          >
+            ✕
+          </ActionBtn>
+        )}
+      </div>
     </div>
+  )
+}
+
+function ActionBtn({
+  children,
+  onClick,
+  title,
+  disabled,
+  hoverColor = '#8ba4bf',
+  hoverBg = 'rgba(255,255,255,0.06)',
+}: {
+  children: React.ReactNode
+  onClick: (e: React.MouseEvent) => void
+  title?: string
+  disabled?: boolean
+  hoverColor?: string
+  hoverBg?: string
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      disabled={disabled}
+      className="rounded px-1.5 py-0.5 text-[12px] transition-colors disabled:opacity-40"
+      style={{ color: '#4a6380' }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = hoverBg
+        e.currentTarget.style.color = hoverColor
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent'
+        e.currentTarget.style.color = '#4a6380'
+      }}
+    >
+      {children}
+    </button>
   )
 }
