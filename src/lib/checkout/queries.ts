@@ -1,6 +1,12 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { createCheckout, createCheckin } from '~/server/function/checkout'
+import { createCheckout, createCheckin, getCheckoutHistory } from '~/server/function/checkout'
+
+export const checkoutHistoryQuery = () =>
+  queryOptions({
+    queryKey: ['checkout-history'],
+    queryFn: ({ signal }) => getCheckoutHistory({ signal }),
+  })
 
 export function useCheckoutMutation() {
   const qc = useQueryClient()

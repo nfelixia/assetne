@@ -1,18 +1,42 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { equipmentQueries } from '~/lib/equipment/queries'
+import { checkoutHistoryQuery } from '~/lib/checkout/queries'
 
 export const Route = createFileRoute('/(app)/reports')({
   beforeLoad: ({ context }: any) => {
     if (context?.session?.role !== 'admin') throw redirect({ to: '/dashboard' })
   },
-  loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData(equipmentQueries.list()),
+  loader: async ({ context: { queryClient } }) => {
+    await Promise.all([
+      queryClient.ensureQueryData(equipmentQueries.list()),
+      queryClient.ensureQueryData(checkoutHistoryQuery()),
+    ])
+  },
   component: ReportsPage,
 })
 
+const CONDITION_LABEL: Record<string, string> = {
+  perfect: 'Perfeito',
+  minor:   'Dano leve',
+  major:   'Dano grave',
+}
+
+const CONDITION_COLOR: Record<string, string> = {
+  perfect: '#3fb950',
+  minor:   '#e3b341',
+  major:   '#f85149',
+}
+
+type HistoryFilter = 'all' | 'active' | 'returned'
+
 function ReportsPage() {
-  const { data: equipment } = useSuspenseQuery(equipmentQueries.list())
+  const { data: equipment }     = useSuspenseQuery(equipmentQueries.list())
+  const { data: history = [] }  = useSuspenseQuery(checkoutHistoryQuery())
+
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
+  const [searchHistory, setSearchHistory] = useState('')
 
   const total       = equipment.length
   const inUse       = equipment.filter((e) => e.status === 'in-use').length
@@ -23,6 +47,22 @@ function ReportsPage() {
     acc[e.category] = (acc[e.category] ?? 0) + 1
     return acc
   }, {})
+
+  const filteredHistory = history.filter((h) => {
+    const matchStatus =
+      historyFilter === 'all' ? true :
+      historyFilter === 'active' ? h.checkedInAt === null :
+      h.checkedInAt !== null
+
+    const q = searchHistory.toLowerCase()
+    const matchSearch =
+      !q ||
+      (h.equipmentName ?? '').toLowerCase().includes(q) ||
+      h.responsible.toLowerCase().includes(q) ||
+      h.project.toLowerCase().includes(q)
+
+    return matchStatus && matchSearch
+  })
 
   return (
     <div className="animate-[fadeIn_0.3s_ease]">
@@ -83,6 +123,101 @@ function ReportsPage() {
             <StatusDot status={eq.status as 'available' | 'in-use' | 'maintenance'} />
           </div>
         ))}
+      </div>
+
+      {/* Checkout history */}
+      <div className="mt-3 overflow-hidden rounded-lg border border-white/10 bg-[#161b22]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-semibold text-[#e6edf3]">Histórico de saídas</span>
+            <span className="rounded-full bg-[#21262d] px-2 py-0.5 font-['JetBrains_Mono'] text-[11px] text-[#8b949e]">
+              {filteredHistory.length}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={searchHistory}
+              onChange={(e) => setSearchHistory(e.target.value)}
+              placeholder="Buscar..."
+              className="h-7 rounded-md border border-white/10 bg-[#0d1117] px-2.5 text-[12px] text-[#e6edf3] placeholder-[#6e7681] outline-none focus:border-[#58a6ff]"
+            />
+            {(['all', 'active', 'returned'] as HistoryFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setHistoryFilter(f)}
+                className={`rounded px-2.5 py-0.5 text-[11px] font-medium transition-all ${
+                  historyFilter === f
+                    ? 'bg-[#21262d] text-[#e6edf3]'
+                    : 'text-[#6e7681] hover:text-[#8b949e]'
+                }`}
+              >
+                {f === 'all' ? 'Todos' : f === 'active' ? 'Em uso' : 'Devolvidos'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {filteredHistory.length === 0 ? (
+          <div className="p-6 text-center text-[13px] text-[#6e7681]">
+            Nenhum registro encontrado
+          </div>
+        ) : (
+          filteredHistory.map((h, i) => {
+            const isActive   = h.checkedInAt === null
+            const outDate    = new Date(h.checkedOutAt).toLocaleDateString('pt-BR')
+            const inDate     = h.checkedInAt
+              ? new Date(h.checkedInAt).toLocaleDateString('pt-BR')
+              : null
+
+            return (
+              <div
+                key={h.id}
+                className={`flex items-start gap-3 px-4 py-3 ${
+                  i < filteredHistory.length - 1 ? 'border-b border-white/10' : ''
+                }`}
+              >
+                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ background: isActive ? '#e3b341' : '#3fb950' }}
+                  />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span className="text-[13px] font-medium text-[#e6edf3]">
+                      {h.equipmentName ?? '—'}
+                    </span>
+                    <span className="text-[11px] text-[#6e7681]">{h.equipmentCategory ?? ''}</span>
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-[#8b949e]">
+                    {h.responsible}{h.responsibleRole ? ` · ${h.responsibleRole}` : ''}{' '}
+                    <span className="text-[#6e7681]">→ {h.project}</span>
+                  </div>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <div className="text-[12px] text-[#8b949e]">{outDate}</div>
+                  {inDate ? (
+                    <div className="text-[11px] text-[#6e7681]">
+                      devolvido {inDate}
+                      {h.returnCondition && (
+                        <span
+                          className="ml-1"
+                          style={{ color: CONDITION_COLOR[h.returnCondition] ?? '#8b949e' }}
+                        >
+                          · {CONDITION_LABEL[h.returnCondition] ?? h.returnCondition}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-[#e3b341]">em uso</div>
+                  )}
+                </div>
+              </div>
+            )
+          })
+        )}
       </div>
     </div>
   )

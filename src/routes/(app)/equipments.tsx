@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { equipmentQueries, type EquipmentWithCheckout } from '~/lib/equipment/queries'
+import { equipmentQueries, useDeleteEquipmentMutation, useSetAvailableMutation, type EquipmentWithCheckout } from '~/lib/equipment/queries'
 import { NewEquipModal } from '~/components/assetne/NewEquipModal'
+import { EditEquipModal } from '~/components/assetne/EditEquipModal'
 import { EquipQRModal } from '~/components/assetne/EquipQRModal'
 import { StatusBadge } from '~/components/assetne/StatusBadge'
 import { CAT_ICON } from '~/components/assetne/utils'
@@ -26,6 +27,7 @@ function EquipmentsPage() {
   const [filter,        setFilter]        = useState('all')
   const [showNewModal,  setShowNewModal]  = useState(false)
   const [qrEquipment,   setQrEquipment]   = useState<EquipmentWithCheckout | null>(null)
+  const [editEquipment, setEditEquipment] = useState<EquipmentWithCheckout | null>(null)
 
   const filtered = equipment.filter((e) => {
     const q = search.toLowerCase()
@@ -85,12 +87,19 @@ function EquipmentsPage() {
               key={eq.id}
               eq={eq}
               onShowQR={() => setQrEquipment(eq)}
+              onEdit={() => setEditEquipment(eq)}
             />
           ))}
         </div>
       )}
 
       {showNewModal && <NewEquipModal onClose={() => setShowNewModal(false)} />}
+      {editEquipment && (
+        <EditEquipModal
+          equipment={editEquipment}
+          onClose={() => setEditEquipment(null)}
+        />
+      )}
       {qrEquipment && (
         <EquipQRModal
           equipment={qrEquipment}
@@ -104,22 +113,69 @@ function EquipmentsPage() {
 function EquipCard({
   eq,
   onShowQR,
+  onEdit,
 }: {
   eq: EquipmentWithCheckout
   onShowQR: () => void
+  onEdit: () => void
 }) {
   const icon = CAT_ICON[eq.category] ?? '📦'
+  const deleteMutation = useDeleteEquipmentMutation()
+  const restoreMutation = useSetAvailableMutation()
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm(`Remover "${eq.name}"? Esta ação não pode ser desfeita.`)) return
+    deleteMutation.mutate(eq.id)
+  }
+
+  const handleRestore = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    restoreMutation.mutate(eq.id)
+  }
+
   return (
     <div className="group rounded-lg border border-white/10 bg-[#161b22] p-[14px] transition-all hover:border-white/20 hover:bg-[#21262d]">
-      <div className="mb-2.5 flex items-start justify-between">
+      <div className="mb-2.5 flex items-start justify-between gap-1">
         <div className="text-[22px]">{icon}</div>
-        <button
-          onClick={onShowQR}
-          title="Ver QR Code"
-          className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#6e7681] opacity-0 transition-all group-hover:opacity-100 hover:bg-white/10 hover:text-[#8b949e]"
-        >
-          QR
-        </button>
+        <div className="flex items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
+          {eq.status === 'maintenance' && (
+            <button
+              onClick={handleRestore}
+              title="Marcar como disponível"
+              disabled={restoreMutation.isPending}
+              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#3fb950] hover:bg-[#3fb950]/10"
+            >
+              ✓
+            </button>
+          )}
+          {eq.status !== 'in-use' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit() }}
+              title="Editar"
+              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#6e7681] hover:bg-white/10 hover:text-[#8b949e]"
+            >
+              ✎
+            </button>
+          )}
+          <button
+            onClick={onShowQR}
+            title="Ver QR Code"
+            className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#6e7681] hover:bg-white/10 hover:text-[#8b949e]"
+          >
+            QR
+          </button>
+          {eq.status === 'available' && (
+            <button
+              onClick={handleDelete}
+              title="Excluir"
+              disabled={deleteMutation.isPending}
+              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-[#6e7681] hover:bg-[#f85149]/10 hover:text-[#f85149]"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
       <div className="mb-0.5 font-['Space_Grotesk'] text-[13px] font-semibold leading-tight text-[#e6edf3]">
         {eq.name}

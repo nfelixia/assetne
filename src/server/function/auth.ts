@@ -24,7 +24,7 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
 }
 
 export const loginFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ username: z.string(), password: z.string() }))
+  .inputValidator((d: unknown) => z.object({ username: z.string(), password: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const user = await db.query.users.findFirst({
       where: eq(users.username, data.username.toLowerCase()),
@@ -58,13 +58,13 @@ export const getSessionFn = createServerFn({ method: 'GET' }).handler(async () =
 })
 
 export const createUserFn = createServerFn({ method: 'POST' })
-  .validator(
+  .inputValidator((d: unknown) =>
     z.object({
       username: z.string().min(3),
       name: z.string().min(2),
       password: z.string().min(6),
       role: z.enum(['admin', 'operator']),
-    }),
+    }).parse(d),
   )
   .handler(async ({ data }) => {
     const existing = await db.query.users.findFirst({
@@ -76,7 +76,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
     const [user] = await db
       .insert(users)
       .values({
-        id: generateId(),
+        id: generateId('user'),
         username: data.username.toLowerCase(),
         name: data.name,
         passwordHash,
@@ -89,7 +89,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
   })
 
 export const deleteUserFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ id: z.string() }))
+  .inputValidator((d: unknown) => z.object({ id: z.string() }).parse(d))
   .handler(async ({ data }) => {
     await db.delete(users).where(eq(users.id, data.id))
     return { ok: true }

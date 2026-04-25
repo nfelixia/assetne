@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { eq } from 'drizzle-orm'
+import { desc, eq, isNull } from 'drizzle-orm'
 import * as z from 'zod'
 import { db } from '~/db'
 import { checkout } from '~/db/schema/checkout.schema'
@@ -57,3 +57,26 @@ export const createCheckin = createServerFn({ method: 'POST' })
       .set({ status: newStatus })
       .where(eq(equipment.id, data.equipmentId))
   })
+
+export const getCheckoutHistory = createServerFn({ method: 'GET' }).handler(async () => {
+  const rows = await db
+    .select({
+      id: checkout.id,
+      equipmentId: checkout.equipmentId,
+      equipmentName: equipment.name,
+      equipmentCategory: equipment.category,
+      responsible: checkout.responsible,
+      responsibleRole: checkout.responsibleRole,
+      project: checkout.project,
+      expectedReturn: checkout.expectedReturn,
+      checkedOutAt: checkout.checkedOutAt,
+      checkedInAt: checkout.checkedInAt,
+      returnCondition: checkout.returnCondition,
+    })
+    .from(checkout)
+    .leftJoin(equipment, eq(checkout.equipmentId, equipment.id))
+    .orderBy(desc(checkout.checkedOutAt))
+    .limit(300)
+
+  return rows
+})

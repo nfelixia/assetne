@@ -133,19 +133,34 @@ function StatCard({
   )
 }
 
+function isOverdue(expectedReturn: string | null): boolean {
+  if (!expectedReturn) return false
+  const today = new Date().toISOString().split('T')[0]
+  return expectedReturn < today
+}
+
 function EquipRow({ eq, isLast }: { eq: EquipmentWithCheckout; isLast: boolean }) {
   const icon = CAT_ICON[eq.category] ?? '📦'
+  const overdue = eq.activeCheckout ? isOverdue(eq.activeCheckout.expectedReturn) : false
+
   return (
     <div
       className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-[#21262d] ${
         !isLast ? 'border-b border-white/10' : ''
-      }`}
+      } ${overdue ? 'bg-[#f85149]/[0.03]' : ''}`}
     >
       <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md border border-white/10 bg-[#21262d] text-base">
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[13px] font-medium text-[#e6edf3]">{eq.name}</div>
+        <div className="flex items-center gap-1.5">
+          <span className="truncate text-[13px] font-medium text-[#e6edf3]">{eq.name}</span>
+          {overdue && (
+            <span className="shrink-0 rounded px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-[#f85149]/15 text-[#f85149]">
+              Atrasado
+            </span>
+          )}
+        </div>
         <div className="mt-0.5 text-[11px] text-[#6e7681]">
           {eq.category} ·{' '}
           <span className="font-['JetBrains_Mono'] text-[#8b949e]">{eq.value}</span>
@@ -158,6 +173,11 @@ function EquipRow({ eq, isLast }: { eq: EquipmentWithCheckout; isLast: boolean }
           </div>
           <div className="truncate text-[11px] text-[#6e7681]">
             {eq.activeCheckout.project}
+            {eq.activeCheckout.expectedReturn && (
+              <span className={`ml-1.5 ${overdue ? 'text-[#f85149]' : 'text-[#6e7681]'}`}>
+                · {new Date(eq.activeCheckout.expectedReturn + 'T12:00:00').toLocaleDateString('pt-BR')}
+              </span>
+            )}
           </div>
         </div>
       )}

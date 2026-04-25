@@ -4,6 +4,9 @@ import {
   getEquipmentWithCheckouts,
   createEquipment,
   setEquipmentMaintenance,
+  setEquipmentAvailable,
+  updateEquipment,
+  deleteEquipment,
 } from '~/server/function/equipment'
 
 export type EquipmentStatus = 'available' | 'in-use' | 'maintenance'
@@ -20,6 +23,7 @@ export type EquipmentWithCheckout = {
   activeCheckout: {
     id: string
     responsible: string
+    responsibleRole: string | null
     project: string
     expectedReturn: string | null
     checkedOutAt: number
@@ -61,5 +65,48 @@ export function useSetMaintenanceMutation() {
       toast.success('Equipamento enviado para manutenção')
     },
     onError: () => toast.error('Erro ao atualizar status'),
+  })
+}
+
+export function useSetAvailableMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => setEquipmentAvailable({ data: { id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['equipment'] })
+      toast.success('Equipamento marcado como disponível')
+    },
+    onError: () => toast.error('Erro ao atualizar status'),
+  })
+}
+
+export function useUpdateEquipmentMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      id: string
+      name: string
+      category: string
+      value: string
+      serialNumber?: string
+      condition: 'new' | 'good' | 'regular'
+    }) => updateEquipment({ data }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['equipment'] })
+      toast.success('Equipamento atualizado')
+    },
+    onError: () => toast.error('Erro ao atualizar equipamento'),
+  })
+}
+
+export function useDeleteEquipmentMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteEquipment({ data: { id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['equipment'] })
+      toast.success('Equipamento removido')
+    },
+    onError: () => toast.error('Erro ao remover equipamento'),
   })
 }
