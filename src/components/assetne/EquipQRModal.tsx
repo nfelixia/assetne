@@ -99,7 +99,6 @@ export function EquipQRModal({ equipment, onClose }: Props) {
           />
           <div style={{ textAlign: 'center', fontFamily: 'sans-serif' }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: '#0d1117' }}>{equipment.name}</div>
-            <div style={{ fontSize: 11, color: '#6e7681', marginTop: 2 }}>{equipment.id}</div>
           </div>
         </div>
 
@@ -108,13 +107,7 @@ export function EquipQRModal({ equipment, onClose }: Props) {
             onClick={handleDownloadPNG}
             className="rounded-md bg-[#1f6feb] px-5 py-2 text-[13px] font-medium text-white transition-colors hover:bg-[#388bfd]"
           >
-            ↓ Baixar PNG
-          </button>
-          <button
-            onClick={handlePrint}
-            className="rounded-md border border-white/10 px-5 py-2 text-[13px] font-medium text-[#8b949e] transition-colors hover:text-[#e6edf3]"
-          >
-            Imprimir
+            ↓ Baixar QR Code
           </button>
           <button
             onClick={onClose}

@@ -28,8 +28,8 @@ export const Route = createRootRouteWithContext<{
                 content: "width=device-width, initial-scale=1"
             },
             ...seo({
-                title: "Instructa Start",
-                description: "Instructa App Starter"
+                title: "AssetNE — Gestão de Equipamentos",
+                description: "Gestão inteligente de equipamentos e QR Codes para equipes de produção audiovisual"
             })
         ],
         links: [
@@ -54,25 +54,11 @@ export const Route = createRootRouteWithContext<{
                 rel: "stylesheet",
                 href: customCss
             },
-            {
-                rel: "apple-touch-icon",
-                sizes: "180x180",
-                href: "/apple-touch-icon.png"
-            },
-            {
-                rel: "icon",
-                type: "image/png",
-                sizes: "32x32",
-                href: "/favicon-32x32.png"
-            },
-            {
-                rel: "icon",
-                type: "image/png",
-                sizes: "16x16",
-                href: "/favicon-16x16.png"
-            },
-            { rel: "manifest", href: "/site.webmanifest", color: "#fffff" },
-            { rel: "icon", href: "/favicon.ico" }
+            { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+            { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
+            { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
+            { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
+            { rel: "manifest", href: "/site.webmanifest" }
         ]
     }),
     errorComponent: (props) => {
@@ -103,7 +89,7 @@ function RootComponent() {
 function RootDocument({ children }: { children: React.ReactNode }) {
     const initial = Route.useLoaderData() as Theme
     return (
-        <html lang="en" className={initial === "system" ? "" : initial}>
+        <html lang="pt-BR" className={initial === "system" ? "" : initial}>
             <head>
                 <ThemeInitScript />
                 <HeadContent />

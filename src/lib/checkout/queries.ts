@@ -26,6 +26,21 @@ export function useCheckoutMutation() {
   })
 }
 
+export function useCheckoutScanMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      equipmentIds: string[]
+      responsible: string
+      responsibleRole?: string
+      project: string
+      expectedReturn?: string
+    }) => createCheckout({ data }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['equipment'] }),
+    onError:   () => toast.error('Erro ao registrar saída'),
+  })
+}
+
 export function useCheckinMutation() {
   const qc = useQueryClient()
   return useMutation({
@@ -39,5 +54,18 @@ export function useCheckinMutation() {
       toast.success('Devolução registrada com sucesso')
     },
     onError: () => toast.error('Erro ao registrar devolução'),
+  })
+}
+
+export function useCheckinScanMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      checkoutId: string
+      equipmentId: string
+      returnCondition: 'perfect' | 'minor' | 'major'
+    }) => createCheckin({ data }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['equipment'] }),
+    onError:   () => toast.error('Erro ao registrar devolução'),
   })
 }
