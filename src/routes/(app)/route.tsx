@@ -13,12 +13,12 @@ export const Route = createFileRoute('/(app)')({
 })
 
 const NAV_ALL = [
-  { to: '/dashboard',  label: 'Dashboard',      icon: HomeIcon },
-  { to: '/equipments', label: 'Equipamentos',    icon: PackageIcon },
+  { to: '/dashboard',  label: 'Dashboard',    icon: HomeIcon },
+  { to: '/equipments', label: 'Equipamentos',  icon: PackageIcon },
 ]
 const NAV_ADMIN = [
-  { to: '/reports',    label: 'Relatórios',      icon: ChartIcon },
-  { to: '/settings',   label: 'Configurações',   icon: GearIcon },
+  { to: '/reports',    label: 'Relatórios',    icon: ChartIcon },
+  { to: '/settings',   label: 'Configurações', icon: GearIcon },
 ]
 
 function AppLayout() {
@@ -37,43 +37,84 @@ function AppLayout() {
 
   return (
     <div
-      className="flex h-[100dvh] overflow-hidden bg-[#0d1117] text-[#e6edf3]"
-      style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
+      className="flex h-[100dvh] overflow-hidden"
+      style={{
+        background: '#070b14',
+        color: '#e8edf5',
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      }}
     >
-      {/* ── Sidebar (desktop only) ── */}
-      <aside className="hidden md:flex w-[216px] shrink-0 flex-col border-r border-white/10 bg-[#161b22]">
-        <div className="border-b border-white/10 px-[18px] pb-4 pt-[18px]">
-          <div className="font-['Space_Grotesk'] text-[17px] font-bold tracking-tight text-[#e6edf3]">
-            AssetNE
+      {/* ── Sidebar desktop ── */}
+      <aside
+        className="hidden md:flex w-[220px] shrink-0 flex-col"
+        style={{ background: '#0c1020', borderRight: '1px solid rgba(255,255,255,0.05)' }}
+      >
+        {/* Logo */}
+        <div className="px-5 py-[18px]" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <div className="flex items-center gap-2.5">
+            <LogoIcon size={26} />
+            <div>
+              <div
+                className="text-[16px] font-bold leading-none"
+                style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#eef2ff', letterSpacing: '-0.3px' }}
+              >
+                AssetNE
+              </div>
+              <div
+                className="mt-[5px] text-[9px] leading-none"
+                style={{ letterSpacing: '0.14em', color: '#2b4266' }}
+              >
+                MAESTRADA · PRODUCTION CONTROL
+              </div>
+            </div>
           </div>
-          <div className="mt-0.5 text-[11px] tracking-wider text-[#6e7681]">NAESTRADA</div>
         </div>
 
-        <nav className="flex-1 py-1.5">
-          {nav.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className="flex items-center border-l-2 border-transparent px-[18px] py-2 text-[13px] text-[#8b949e] transition-all duration-150 hover:border-transparent hover:bg-white/[0.04] hover:text-[#e6edf3] [&.active]:border-[#58a6ff] [&.active]:bg-[#21262d] [&.active]:font-medium [&.active]:text-[#e6edf3]"
-              activeProps={{ className: 'active' }}
-            >
-              {item.label}
-            </Link>
-          ))}
+        {/* Nav */}
+        <nav className="flex-1 px-2 py-3">
+          {nav.map((item) => {
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="flex items-center gap-3 my-0.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 text-[#4a6380] hover:bg-white/[0.04] hover:text-[#b8cddf] [&.active]:bg-[#162040] [&.active]:text-[#93c5fd]"
+                activeProps={{ className: 'active' }}
+              >
+                <Icon size={16} />
+                {item.label}
+              </Link>
+            )
+          })}
         </nav>
 
-        <div className="border-t border-white/10 px-4 py-3">
+        {/* User */}
+        <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1f6feb] text-[12px] font-semibold text-white">
+              <div
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold text-white"
+                style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
+              >
                 {session.name.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <div className="truncate text-[12px] font-medium leading-tight text-[#e6edf3]">{session.name}</div>
-                <div className="text-[11px] text-[#6e7681]">{isAdmin ? 'Administrador' : 'Operador'}</div>
+                <div className="truncate text-[12px] font-medium" style={{ color: '#d6e4f0' }}>
+                  {session.name}
+                </div>
+                <div className="text-[10px]" style={{ color: '#2b4266' }}>
+                  {isAdmin ? 'Administrador' : 'Operador'}
+                </div>
               </div>
             </div>
-            <button onClick={handleLogout} title="Sair" className="shrink-0 text-[#6e7681] transition-colors hover:text-[#f85149]">
+            <button
+              onClick={handleLogout}
+              title="Sair"
+              className="shrink-0 p-1 transition-colors"
+              style={{ color: '#2b4266' }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = '#2b4266')}
+            >
               <LogoutIcon />
             </button>
           </div>
@@ -83,46 +124,83 @@ function AppLayout() {
       {/* ── Main ── */}
       <main className="flex flex-1 flex-col overflow-hidden min-w-0">
         {/* Topbar */}
-        <div className="flex shrink-0 items-center justify-between border-b border-white/10 bg-[#161b22] md:bg-transparent px-4 md:px-6 py-3 md:py-[11px]">
+        <div
+          className="flex shrink-0 items-center justify-between px-4 md:px-6 py-[11px]"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(7,11,20,0.8)' }}
+        >
           {/* Mobile: logo */}
-          <div className="flex items-center gap-2 md:hidden">
-            <span className="font-['Space_Grotesk'] text-[17px] font-bold tracking-tight text-[#e6edf3]">
+          <div className="flex items-center gap-2.5 md:hidden">
+            <LogoIcon size={22} />
+            <span
+              className="text-[16px] font-bold"
+              style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#eef2ff' }}
+            >
               AssetNE
             </span>
-            <span className="text-[10px] tracking-widest text-[#6e7681]">NE</span>
           </div>
-          {/* Desktop: breadcrumb-style label */}
-          <div className="hidden md:block font-['JetBrains_Mono'] text-[11px] tracking-wider text-[#6e7681]">
-            NAESTRADA · PRODUCTION CONTROL
+          {/* Desktop: breadcrumb */}
+          <div
+            className="hidden md:block text-[11px]"
+            style={{ fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.12em', color: '#1e3a5c' }}
+          >
+            MAESTRADA · PRODUCTION CONTROL
           </div>
 
+          {/* Right */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-[11px] text-[#3fb950]">
-              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#3fb950]" />
-              <span className="hidden sm:inline">Online</span>
+            <div
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-[5px]"
+              style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }}
+            >
+              <span
+                className="h-1.5 w-1.5 rounded-full animate-pulse"
+                style={{ background: '#10b981' }}
+              />
+              <span
+                className="hidden sm:inline text-[11px] font-medium"
+                style={{ color: '#10b981' }}
+              >
+                Online
+              </span>
             </div>
-            {/* Mobile: user avatar + logout */}
+
+            {/* Mobile: avatar + logout */}
             <div className="flex items-center gap-2 md:hidden">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1f6feb] text-[12px] font-semibold text-white">
+              <div
+                className="flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-semibold text-white"
+                style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' }}
+              >
                 {session.name.charAt(0).toUpperCase()}
               </div>
-              <button onClick={handleLogout} title="Sair" className="p-1 text-[#6e7681] hover:text-[#f85149]">
+              <button
+                onClick={handleLogout}
+                className="p-1"
+                style={{ color: '#2b4266' }}
+              >
                 <LogoutIcon />
               </button>
             </div>
             {/* Desktop: version */}
-            <span className="hidden md:inline font-['JetBrains_Mono'] text-[11px] text-[#6e7681]">v3.0.0</span>
+            <span
+              className="hidden md:inline text-[11px]"
+              style={{ fontFamily: "'JetBrains Mono', monospace", color: '#1e3a5c' }}
+            >
+              v3.0.0
+            </span>
           </div>
         </div>
 
-        {/* Page content — extra bottom padding on mobile for bottom nav */}
+        {/* Page content */}
         <div className="flex-1 overflow-y-auto p-4 pb-24 md:p-7 md:pb-7">
           <Outlet />
         </div>
       </main>
 
-      {/* ── Bottom nav (mobile only) ── */}
-      <nav className="fixed bottom-0 inset-x-0 md:hidden z-40 border-t border-white/10 bg-[#161b22]">
+      {/* ── Bottom nav mobile ── */}
+      <nav
+        className="fixed bottom-0 inset-x-0 md:hidden z-40"
+        style={{ background: '#0c1020', borderTop: '1px solid rgba(255,255,255,0.05)' }}
+      >
         <div className="flex h-16 items-center justify-around px-2">
           {nav.map((item) => {
             const Icon = item.icon
@@ -130,10 +208,11 @@ function AppLayout() {
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex flex-1 flex-col items-center justify-center gap-0.5 py-1 text-[#6e7681] transition-colors [&.active]:text-[#58a6ff]"
+                className="flex flex-1 flex-col items-center justify-center gap-0.5 py-1 transition-colors [&.active]:text-[#60a5fa]"
+                style={{ color: '#2b4266' }}
                 activeProps={{ className: 'active' }}
               >
-                <Icon />
+                <Icon size={20} />
                 <span className="text-[10px] font-medium">{item.label.split(' ')[0]}</span>
               </Link>
             )
@@ -144,36 +223,51 @@ function AppLayout() {
   )
 }
 
-/* ── Icons ── */
-function HomeIcon() {
+/* ── Logo ── */
+function LogoIcon({ size = 28 }: { size?: number }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <path d="M16 2L30 16L16 30L2 16Z" fill="#1e3a8a" fillOpacity="0.25" stroke="#3b82f6" strokeWidth="0.6" strokeOpacity="0.4"/>
+      <path d="M16 6L26 16L16 26L6 16Z" fill="#1e40af"/>
+      <path d="M16 6L26 16L16 16Z" fill="#3b82f6"/>
+      <path d="M6 16L16 6L16 16Z" fill="#2563eb"/>
+      <path d="M26 16L16 26L16 16Z" fill="#1d4ed8"/>
+      <path d="M16 16L16 26L6 16Z" fill="#1e3a8a"/>
+      <circle cx="16" cy="16" r="2.2" fill="#93c5fd"/>
+    </svg>
+  )
+}
+
+/* ── Icons ── */
+function HomeIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
       <polyline points="9 22 9 12 15 12 15 22"/>
     </svg>
   )
 }
-function PackageIcon() {
+function PackageIcon({ size = 20 }: { size?: number }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
       <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
       <line x1="12" y1="22.08" x2="12" y2="12"/>
     </svg>
   )
 }
-function ChartIcon() {
+function ChartIcon({ size = 20 }: { size?: number }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="20" x2="18" y2="10"/>
       <line x1="12" y1="20" x2="12" y2="4"/>
       <line x1="6" y1="20" x2="6" y2="14"/>
     </svg>
   )
 }
-function GearIcon() {
+function GearIcon({ size = 20 }: { size?: number }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
     </svg>
