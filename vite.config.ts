@@ -20,7 +20,9 @@ export default ({ mode }: ConfigEnv) => {
         projects: ['./tsconfig.json'],
       }),
       tanstackStart(),
-      nitro(),
+      nitro({
+        preset: 'vercel',
+      }),
       react(),
       Icons({
         compiler: 'jsx',
