@@ -5,6 +5,7 @@ import { equipmentQueries, useDeleteEquipmentMutation, useSetAvailableMutation, 
 import { NewEquipModal } from '~/components/assetne/NewEquipModal'
 import { EditEquipModal } from '~/components/assetne/EditEquipModal'
 import { EquipQRModal } from '~/components/assetne/EquipQRModal'
+import { ImportExcelModal } from '~/components/assetne/ImportExcelModal'
 import { StatusBadge } from '~/components/assetne/StatusBadge'
 import { CAT_ICON } from '~/components/assetne/utils'
 
@@ -25,9 +26,10 @@ function EquipmentsPage() {
   const { data: equipment } = useSuspenseQuery(equipmentQueries.list())
   const [search,        setSearch]        = useState('')
   const [filter,        setFilter]        = useState('all')
-  const [showNewModal,  setShowNewModal]  = useState(false)
-  const [qrEquipment,   setQrEquipment]   = useState<EquipmentWithCheckout | null>(null)
-  const [editEquipment, setEditEquipment] = useState<EquipmentWithCheckout | null>(null)
+  const [showNewModal,    setShowNewModal]    = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [qrEquipment,     setQrEquipment]     = useState<EquipmentWithCheckout | null>(null)
+  const [editEquipment,   setEditEquipment]   = useState<EquipmentWithCheckout | null>(null)
 
   const filtered = equipment.filter((e) => {
     const q = search.toLowerCase()
@@ -44,12 +46,20 @@ function EquipmentsPage() {
           </h1>
           <p className="text-[13px] text-[#6e7681]">{equipment.length} itens cadastrados</p>
         </div>
-        <button
-          onClick={() => setShowNewModal(true)}
-          className="rounded-md bg-[#1f6feb] px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-[#388bfd]"
-        >
-          + Novo equipamento
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="rounded-md border border-white/10 px-4 py-2 text-[13px] font-medium text-[#8b949e] transition-colors hover:text-[#e6edf3]"
+          >
+            ↑ Excel
+          </button>
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="rounded-md bg-[#1f6feb] px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-[#388bfd]"
+          >
+            + Novo equipamento
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -81,7 +91,7 @@ function EquipmentsPage() {
           Nenhum equipamento encontrado
         </div>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(195px,1fr))] gap-2.5">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(195px,1fr))]">
           {filtered.map((eq) => (
             <EquipCard
               key={eq.id}
@@ -93,7 +103,8 @@ function EquipmentsPage() {
         </div>
       )}
 
-      {showNewModal && <NewEquipModal onClose={() => setShowNewModal(false)} />}
+      {showNewModal    && <NewEquipModal onClose={() => setShowNewModal(false)} />}
+      {showImportModal && <ImportExcelModal type="equipment" onClose={() => setShowImportModal(false)} />}
       {editEquipment && (
         <EditEquipModal
           equipment={editEquipment}
@@ -137,7 +148,11 @@ function EquipCard({
   return (
     <div className="group rounded-lg border border-white/10 bg-[#161b22] p-[14px] transition-all hover:border-white/20 hover:bg-[#21262d]">
       <div className="mb-2.5 flex items-start justify-between gap-1">
-        <div className="text-[22px]">{icon}</div>
+        {eq.photoUrl ? (
+          <img src={eq.photoUrl} alt={eq.name} className="h-9 w-9 rounded-md object-cover" />
+        ) : (
+          <div className="text-[22px]">{icon}</div>
+        )}
         <div className="flex items-center gap-0.5 opacity-0 transition-all group-hover:opacity-100">
           {eq.status === 'maintenance' && (
             <button

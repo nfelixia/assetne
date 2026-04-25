@@ -13,14 +13,21 @@ export function Modal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 backdrop-blur-sm sm:items-center"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] overflow-y-auto rounded-xl border border-white/10 bg-[#161b22] p-[26px] shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
-        style={{ width, maxWidth: '92vw' }}
+        className="w-full overflow-y-auto rounded-t-2xl border border-white/10 bg-[#161b22] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)] sm:rounded-xl sm:p-[26px]"
+        style={{
+          maxHeight: '92dvh',
+          maxWidth: width,
+        }}
       >
+        {/* Mobile drag handle */}
+        <div className="mb-4 flex justify-center sm:hidden">
+          <div className="h-1 w-10 rounded-full bg-white/20" />
+        </div>
         <div className="mb-[18px] flex items-center justify-between">
           <h2 className="font-['Space_Grotesk'] text-[17px] font-semibold text-[#e6edf3]">
             {title}

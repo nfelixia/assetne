@@ -7,6 +7,7 @@ import {
   setEquipmentAvailable,
   updateEquipment,
   deleteEquipment,
+  uploadEquipmentPhoto,
 } from '~/server/function/equipment'
 
 export type EquipmentStatus = 'available' | 'in-use' | 'maintenance'
@@ -19,6 +20,7 @@ export type EquipmentWithCheckout = {
   serialNumber: string | null
   status: string
   condition: string
+  photoUrl: string | null
   createdAt: number
   activeCheckout: {
     id: string
@@ -38,6 +40,14 @@ export const equipmentQueries = {
     }),
 }
 
+export function useUploadEquipmentPhotoMutation() {
+  return useMutation({
+    mutationFn: (data: { base64: string; mimeType: string; fileName: string }) =>
+      uploadEquipmentPhoto({ data }),
+    onError: () => toast.error('Erro ao enviar foto'),
+  })
+}
+
 export function useCreateEquipmentMutation() {
   const qc = useQueryClient()
   return useMutation({
@@ -47,6 +57,7 @@ export function useCreateEquipmentMutation() {
       value: string
       serialNumber?: string
       condition: 'new' | 'good' | 'regular'
+      photoUrl?: string | null
     }) => createEquipment({ data }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['equipment'] })
@@ -90,6 +101,7 @@ export function useUpdateEquipmentMutation() {
       value: string
       serialNumber?: string
       condition: 'new' | 'good' | 'regular'
+      photoUrl?: string | null
     }) => updateEquipment({ data }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['equipment'] })

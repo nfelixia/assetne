@@ -1,11 +1,7 @@
-import { SignJWT, jwtVerify } from 'jose'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 
 export const SESSION_COOKIE = 'assetne_session'
-const EXPIRES_IN = 60 * 60 * 24 * 7 // 7 days
-
-function getSecret() {
-  return new TextEncoder().encode(process.env.AUTH_SECRET!)
-}
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 
 export type SessionUser = {
   id: string
@@ -14,20 +10,38 @@ export type SessionUser = {
   role: 'admin' | 'operator'
 }
 
-export async function createSessionToken(user: SessionUser): Promise<string> {
-  return new SignJWT({ ...user })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setExpirationTime(`${EXPIRES_IN}s`)
-    .sign(getSecret())
+function b64(input: string): string {
+  return Buffer.from(input).toString('base64url')
 }
 
-export async function verifySessionToken(token: string): Promise<SessionUser | null> {
+export function createSessionToken(user: SessionUser): string {
+  const header = b64(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  const payload = b64(
+    JSON.stringify({ ...user, exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE }),
+  )
+  const sig = createHmac('sha256', process.env.AUTH_SECRET!)
+    .update(`${header}.${payload}`)
+    .digest('base64url')
+  return `${header}.${payload}.${sig}`
+}
+
+export function verifySessionToken(token: string): SessionUser | null {
   try {
-    const { payload } = await jwtVerify(token, getSecret())
-    return payload as unknown as SessionUser
+    const [header, payload, sig] = token.split('.')
+    if (!header || !payload || !sig) return null
+
+    const expected = createHmac('sha256', process.env.AUTH_SECRET!)
+      .update(`${header}.${payload}`)
+      .digest('base64url')
+
+    if (!timingSafeEqual(Buffer.from(sig, 'base64url'), Buffer.from(expected, 'base64url')))
+      return null
+
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString())
+    if (data.exp && Math.floor(Date.now() / 1000) > data.exp) return null
+
+    return data as SessionUser
   } catch {
     return null
   }
 }
-
-export const SESSION_MAX_AGE = EXPIRES_IN

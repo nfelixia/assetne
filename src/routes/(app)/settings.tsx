@@ -3,6 +3,7 @@ import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { clientsQueries, useCreateClientMutation, useDeleteClientMutation } from '~/lib/clients/queries'
+import { ImportExcelModal } from '~/components/assetne/ImportExcelModal'
 import { collaboratorsQueries, useCreateCollaboratorMutation, useDeleteCollaboratorMutation } from '~/lib/collaborators/queries'
 import { createUserFn, deleteUserFn, getUsersFn, changePasswordFn } from '~/server/function/auth'
 import type { Client } from '~/db/schema/client.schema'
@@ -118,7 +119,7 @@ function UsersPanel() {
 
   return (
     <Panel title="Usuários do sistema" description="Credenciais de acesso ao AssetNE" count={users.length}>
-      <div className="mb-4 grid grid-cols-2 gap-2">
+      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <input
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -295,6 +296,7 @@ function CollaboratorsPanel() {
 function ClientsPanel() {
   const { data: clients } = useSuspenseQuery(clientsQueries.list())
   const [name, setName] = useState('')
+  const [showImport, setShowImport] = useState(false)
   const createMutation = useCreateClientMutation()
   const deleteMutation = useDeleteClientMutation()
 
@@ -305,11 +307,17 @@ function ClientsPanel() {
   }
 
   return (
-    <Panel title="Clientes" description="Clientes disponíveis para seleção nas saídas" count={clients.length}>
+    <>
+      {showImport && <ImportExcelModal type="clients" onClose={() => setShowImport(false)} />}
+      <Panel title="Clientes" description="Clientes disponíveis para seleção nas saídas" count={clients.length}>
       <div className="mb-4 flex gap-2">
         <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           placeholder="Nome do cliente"
           className="flex-1 rounded-md border border-white/10 bg-[#0d1117] px-3 py-2 text-[13px] text-[#e6edf3] placeholder-[#6e7681] outline-none focus:border-[#58a6ff]" />
+        <button onClick={() => setShowImport(true)}
+          className="rounded-md border border-white/10 px-3 py-2 text-[13px] font-medium text-[#8b949e] transition-colors hover:text-[#e6edf3]">
+          ↑ Excel
+        </button>
         <button onClick={handleAdd} disabled={!name.trim() || createMutation.isPending}
           className="rounded-md bg-[#1f6feb] px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-[#388bfd] disabled:opacity-45">
           + Adicionar
@@ -331,6 +339,7 @@ function ClientsPanel() {
         ))}
       </div>
     </Panel>
+    </>
   )
 }
 

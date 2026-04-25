@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Modal, ModalFooter } from './Modal'
-import { useCreateEquipmentMutation } from '~/lib/equipment/queries'
+import { useCreateEquipmentMutation, useUploadEquipmentPhotoMutation } from '~/lib/equipment/queries'
 
 const CATEGORIES = ['Câmera', 'Estabilizador', 'Iluminação', 'Áudio', 'Outro']
 const CONDITIONS: { value: 'new' | 'good' | 'regular'; label: string }[] = [
@@ -9,21 +9,87 @@ const CONDITIONS: { value: 'new' | 'good' | 'regular'; label: string }[] = [
   { value: 'regular', label: 'Regular' },
 ]
 
+async function resizeToJpeg(file: File, maxPx = 800): Promise<{ base64: string; mimeType: string; fileName: string }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const ratio  = Math.min(maxPx / img.width, maxPx / img.height, 1)
+      const w      = Math.round(img.width  * ratio)
+      const h      = Math.round(img.height * ratio)
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(url)
+      const base64   = canvas.toDataURL('image/jpeg', 0.85)
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
+      resolve({ base64, mimeType: 'image/jpeg', fileName })
+    }
+    img.onerror = reject
+    img.src = url
+  })
+}
+
 export function NewEquipModal({ onClose }: { onClose: () => void }) {
   const [name,         setName]         = useState('')
   const [category,     setCategory]     = useState('')
   const [value,        setValue]        = useState('')
   const [serialNumber, setSerialNumber] = useState('')
   const [condition,    setCondition]    = useState<'new' | 'good' | 'regular'>('new')
-  const mutation = useCreateEquipmentMutation()
+  const [photoData,    setPhotoData]    = useState<{ base64: string; mimeType: string; fileName: string } | null>(null)
+
+  const mutation       = useCreateEquipmentMutation()
+  const uploadMutation = useUploadEquipmentPhotoMutation()
+  const fileRef        = useRef<HTMLInputElement>(null)
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const data = await resizeToJpeg(file)
+    setPhotoData(data)
+  }
 
   const handleConfirm = async () => {
-    await mutation.mutateAsync({ name, category, value, serialNumber, condition })
+    let photoUrl: string | null = null
+    if (photoData) {
+      const res = await uploadMutation.mutateAsync(photoData)
+      photoUrl = res.url
+    }
+    await mutation.mutateAsync({ name, category, value, serialNumber, condition, photoUrl })
     onClose()
   }
 
+  const isLoading = mutation.isPending || uploadMutation.isPending
+
   return (
     <Modal title="Cadastrar Equipamento" onClose={onClose}>
+      {/* Photo picker */}
+      <div className="mb-3">
+        <div className="mb-1.5 text-[12px] font-medium text-[#8b949e]">Foto (opcional)</div>
+        <div
+          onClick={() => fileRef.current?.click()}
+          className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-white/10 p-3 transition-colors hover:border-[#58a6ff]/40 hover:bg-[#58a6ff]/[0.03]"
+        >
+          {photoData ? (
+            <img src={photoData.base64} alt="preview" className="h-14 w-14 rounded-md object-cover" />
+          ) : (
+            <div className="flex h-14 w-14 items-center justify-center rounded-md bg-[#21262d] text-[20px]">
+              📷
+            </div>
+          )}
+          <div className="text-[12px] text-[#6e7681]">
+            {photoData ? 'Clique para trocar a foto' : 'Clique para adicionar uma foto'}
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoChange}
+            className="hidden"
+          />
+        </div>
+      </div>
+
       <Field label="Nome do equipamento">
         <input
           value={name}
@@ -88,7 +154,7 @@ export function NewEquipModal({ onClose }: { onClose: () => void }) {
         onConfirm={handleConfirm}
         confirmLabel="Cadastrar"
         disabled={!name.trim() || !category || !value.trim()}
-        loading={mutation.isPending}
+        loading={isLoading}
       />
     </Modal>
   )

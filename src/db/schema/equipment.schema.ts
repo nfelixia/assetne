@@ -8,6 +8,7 @@ export const equipment = pgTable('equipment', {
   serialNumber: text('serial_number'),
   status: text('status').notNull().default('available'),
   condition: text('condition').notNull().default('new'),
+  photoUrl: text('photo_url'),
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
 })
 

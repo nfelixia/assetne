@@ -8,6 +8,7 @@ interface Props {
 
 export function EquipQRModal({ equipment, onClose }: Props) {
   const printRef = useRef<HTMLDivElement>(null)
+  const svgRef   = useRef<SVGSVGElement>(null)
 
   const handlePrint = () => {
     const content = printRef.current
@@ -23,6 +24,48 @@ export function EquipQRModal({ equipment, onClose }: Props) {
     win.document.close()
     win.print()
     win.close()
+  }
+
+  const handleDownloadPNG = () => {
+    const svg = svgRef.current
+    if (!svg) return
+
+    const SIZE    = 260
+    const PADDING = 20
+    const LABEL_H = 40
+
+    const canvas  = document.createElement('canvas')
+    canvas.width  = SIZE + PADDING * 2
+    canvas.height = SIZE + PADDING * 2 + LABEL_H
+    const ctx     = canvas.getContext('2d')!
+
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    const xml   = new XMLSerializer().serializeToString(svg)
+    const blob  = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' })
+    const url   = URL.createObjectURL(blob)
+    const img   = new Image()
+
+    img.onload = () => {
+      ctx.drawImage(img, PADDING, PADDING, SIZE, SIZE)
+      URL.revokeObjectURL(url)
+
+      ctx.fillStyle = '#0d1117'
+      ctx.font      = 'bold 13px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.fillText(equipment.name, canvas.width / 2, SIZE + PADDING * 2 + 16, canvas.width - PADDING * 2)
+
+      ctx.fillStyle = '#6e7681'
+      ctx.font      = '10px monospace'
+      ctx.fillText(equipment.id, canvas.width / 2, SIZE + PADDING * 2 + 32, canvas.width - PADDING * 2)
+
+      const a    = document.createElement('a')
+      a.download = `qr-${equipment.name.replace(/\s+/g, '-').toLowerCase()}.png`
+      a.href     = canvas.toDataURL('image/png')
+      a.click()
+    }
+    img.src = url
   }
 
   return (
@@ -47,6 +90,7 @@ export function EquipQRModal({ equipment, onClose }: Props) {
           className="flex flex-col items-center gap-3 rounded-xl bg-white p-5"
         >
           <QRCodeSVG
+            ref={svgRef}
             value={equipment.id}
             size={200}
             bgColor="#ffffff"
@@ -61,10 +105,16 @@ export function EquipQRModal({ equipment, onClose }: Props) {
 
         <div className="flex gap-2">
           <button
-            onClick={handlePrint}
+            onClick={handleDownloadPNG}
             className="rounded-md bg-[#1f6feb] px-5 py-2 text-[13px] font-medium text-white transition-colors hover:bg-[#388bfd]"
           >
-            🖨 Imprimir
+            ↓ Baixar PNG
+          </button>
+          <button
+            onClick={handlePrint}
+            className="rounded-md border border-white/10 px-5 py-2 text-[13px] font-medium text-[#8b949e] transition-colors hover:text-[#e6edf3]"
+          >
+            Imprimir
           </button>
           <button
             onClick={onClose}
