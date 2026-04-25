@@ -2,8 +2,23 @@ import { createServerFn } from '@tanstack/react-start'
 import { getWebRequest } from '@tanstack/react-start/server'
 import { eq } from 'drizzle-orm'
 import * as z from 'zod'
-import bcrypt from 'bcryptjs'
+import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto'
+import { promisify } from 'node:util'
 import { db } from '~/db'
+
+const scryptAsync = promisify(scrypt)
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex')
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer
+  return `${buf.toString('hex')}.${salt}`
+}
+
+async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [hash, salt] = stored.split('.')
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer
+  return timingSafeEqual(buf, Buffer.from(hash, 'hex'))
+}
 import { users } from '~/db/schema/user.schema'
 import {
   createSessionToken,
@@ -24,7 +39,7 @@ export const loginFn = createServerFn({ method: 'POST' })
 
     if (!user) throw new Error('Usuário ou senha inválidos')
 
-    const valid = await bcrypt.compare(data.password, user.passwordHash)
+    const valid = await verifyPassword(data.password, user.passwordHash)
     if (!valid) throw new Error('Usuário ou senha inválidos')
 
     const sessionUser: SessionUser = {
@@ -66,7 +81,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
     })
     if (existing) throw new Error('Nome de usuário já existe')
 
-    const passwordHash = await bcrypt.hash(data.password, 10)
+    const passwordHash = await hashPassword(data.password)
     const [user] = await db
       .insert(users)
       .values({
