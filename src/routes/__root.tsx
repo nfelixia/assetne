@@ -30,7 +30,11 @@ export const Route = createRootRouteWithContext<{
             ...seo({
                 title: "AssetNE — Gestão de Equipamentos",
                 description: "Gestão inteligente de equipamentos e QR Codes para equipes de produção audiovisual"
-            })
+            }),
+            { name: "theme-color", content: "#070b14" },
+            { name: "apple-mobile-web-app-capable", content: "yes" },
+            { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+            { name: "apple-mobile-web-app-title", content: "AssetNE" }
         ],
         links: [
             {
