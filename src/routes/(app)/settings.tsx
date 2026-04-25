@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { clientsQueries, useCreateClientMutation, useDeleteClientMutation } from '~/lib/clients/queries'
 import { collaboratorsQueries, useCreateCollaboratorMutation, useDeleteCollaboratorMutation } from '~/lib/collaborators/queries'
-import { createUserFn, deleteUserFn, getUsersFn } from '~/server/function/auth'
+import { createUserFn, deleteUserFn, getUsersFn, changePasswordFn } from '~/server/function/auth'
 import type { Client } from '~/db/schema/client.schema'
 import type { Collaborator } from '~/db/schema/collaborator.schema'
 
@@ -70,10 +70,13 @@ function UsersPanel() {
     queryFn: () => getUsersFn(),
   })
 
-  const [username, setUsername] = useState('')
-  const [name, setName]         = useState('')
-  const [password, setPassword] = useState('')
-  const [role, setRole]         = useState<'admin' | 'operator'>('operator')
+  const [username,      setUsername]      = useState('')
+  const [name,          setName]          = useState('')
+  const [password,      setPassword]      = useState('')
+  const [role,          setRole]          = useState<'admin' | 'operator'>('operator')
+  const [resetingId,    setResetingId]    = useState<string | null>(null)
+  const [newPass,       setNewPass]       = useState('')
+  const [copiedToken,   setCopiedToken]   = useState<string | null>(null)
 
   const createMutation = useMutation({
     mutationFn: () => createUserFn({ data: { username, name, password, role } }),
@@ -93,7 +96,25 @@ function UsersPanel() {
     },
   })
 
+  const changePassMutation = useMutation({
+    mutationFn: ({ id, newPassword }: { id: string; newPassword: string }) =>
+      changePasswordFn({ data: { id, newPassword } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      setResetingId(null); setNewPass('')
+      toast.success('Senha alterada')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao alterar senha'),
+  })
+
   const canAdd = username.trim().length >= 3 && name.trim().length >= 2 && password.length >= 6
+
+  function copyToken(token: string) {
+    navigator.clipboard.writeText(token).then(() => {
+      setCopiedToken(token)
+      setTimeout(() => setCopiedToken(null), 2000)
+    })
+  }
 
   return (
     <Panel title="Usuários do sistema" description="Credenciais de acesso ao AssetNE" count={users.length}>
@@ -141,24 +162,78 @@ function UsersPanel() {
           <div className="p-6 text-center text-[13px] text-[#6e7681]">Nenhum usuário cadastrado</div>
         )}
         {users.map((u: any, i: number) => (
-          <div
-            key={u.id}
-            className={`flex items-center gap-3 px-4 py-3 ${i < users.length - 1 ? 'border-b border-white/10' : ''}`}
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1f6feb] text-[12px] font-semibold text-white">
-              {u.name.charAt(0).toUpperCase()}
+          <div key={u.id} className={i < users.length - 1 ? 'border-b border-white/10' : ''}>
+            <div className="flex items-center gap-3 px-4 py-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1f6feb] text-[12px] font-semibold text-white">
+                {u.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium text-[#e6edf3]">{u.name}</div>
+                <div className="text-[11px] text-[#6e7681]">
+                  @{u.username} · {u.role === 'admin' ? 'Administrador' : 'Operador'}
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => { setResetingId(resetingId === u.id ? null : u.id); setNewPass('') }}
+                  className="rounded px-2 py-1 text-[12px] text-[#6e7681] transition-colors hover:bg-white/[0.06] hover:text-[#8b949e]"
+                >
+                  Alterar senha
+                </button>
+                <button
+                  onClick={() => deleteMutation.mutate(u.id)}
+                  disabled={deleteMutation.isPending}
+                  className="rounded px-2 py-1 text-[12px] text-[#6e7681] transition-colors hover:bg-[#f85149]/10 hover:text-[#f85149]"
+                >
+                  Remover
+                </button>
+              </div>
             </div>
-            <div className="flex-1">
-              <div className="text-[13px] font-medium text-[#e6edf3]">{u.name}</div>
-              <div className="text-[11px] text-[#6e7681]">@{u.username} · {u.role === 'admin' ? 'Administrador' : 'Operador'}</div>
-            </div>
-            <button
-              onClick={() => deleteMutation.mutate(u.id)}
-              disabled={deleteMutation.isPending}
-              className="rounded px-2 py-1 text-[12px] text-[#6e7681] transition-colors hover:bg-[#f85149]/10 hover:text-[#f85149]"
-            >
-              Remover
-            </button>
+
+            {/* Reset token banner */}
+            {u.resetToken && (
+              <div className="mx-4 mb-3 flex items-center justify-between gap-3 rounded-md border border-[#e3b341]/20 bg-[#e3b341]/[0.07] px-3 py-2">
+                <div>
+                  <div className="text-[11px] text-[#e3b341]">Código de recuperação solicitado</div>
+                  <div className="mt-0.5 font-['JetBrains_Mono'] text-[16px] font-bold tracking-[0.3em] text-[#e6edf3]">
+                    {u.resetToken}
+                  </div>
+                </div>
+                <button
+                  onClick={() => copyToken(u.resetToken)}
+                  className="shrink-0 rounded-md border border-white/10 px-3 py-1.5 text-[12px] font-medium text-[#8b949e] transition-colors hover:text-[#e6edf3]"
+                >
+                  {copiedToken === u.resetToken ? '✓ Copiado' : 'Copiar'}
+                </button>
+              </div>
+            )}
+
+            {/* Inline change password */}
+            {resetingId === u.id && (
+              <div className="mx-4 mb-3 flex gap-2">
+                <input
+                  value={newPass}
+                  onChange={(e) => setNewPass(e.target.value)}
+                  type="password"
+                  placeholder="Nova senha (mín. 6 caracteres)"
+                  autoFocus
+                  className="flex-1 rounded-md border border-white/10 bg-[#0d1117] px-3 py-1.5 text-[13px] text-[#e6edf3] placeholder-[#6e7681] outline-none focus:border-[#58a6ff]"
+                />
+                <button
+                  onClick={() => changePassMutation.mutate({ id: u.id, newPassword: newPass })}
+                  disabled={newPass.length < 6 || changePassMutation.isPending}
+                  className="rounded-md bg-[#1f6feb] px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-45"
+                >
+                  Salvar
+                </button>
+                <button
+                  onClick={() => { setResetingId(null); setNewPass('') }}
+                  className="rounded-md border border-white/10 px-3 py-1.5 text-[12px] text-[#6e7681] hover:text-[#e6edf3]"
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>

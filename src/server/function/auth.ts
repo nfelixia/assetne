@@ -101,3 +101,63 @@ export const getUsersFn = createServerFn({ method: 'GET' }).handler(async () => 
     orderBy: (u, { asc }) => asc(u.name),
   })
 })
+
+export const changePasswordFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string(), newPassword: z.string().min(6) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const passwordHash = await hashPassword(data.newPassword)
+    await db
+      .update(users)
+      .set({ passwordHash, resetToken: null, resetExpiresAt: null })
+      .where(eq(users.id, data.id))
+    return { ok: true }
+  })
+
+function generateResetToken(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const bytes = randomBytes(6)
+  return Array.from(bytes).map((b) => chars[b % chars.length]).join('')
+}
+
+export const requestResetFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) => z.object({ username: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    const user = await db.query.users.findFirst({
+      where: eq(users.username, data.username.toLowerCase()),
+    })
+    if (!user) return { ok: true }
+
+    const token = generateResetToken()
+    const expiresAt = Date.now() + 60 * 60 * 1000
+
+    await db
+      .update(users)
+      .set({ resetToken: token, resetExpiresAt: expiresAt })
+      .where(eq(users.id, user.id))
+
+    return { ok: true }
+  })
+
+export const resetPasswordFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) =>
+    z.object({ token: z.string(), newPassword: z.string().min(6) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const user = await db.query.users.findFirst({
+      where: eq(users.resetToken, data.token),
+    })
+
+    if (!user || !user.resetExpiresAt || user.resetExpiresAt < Date.now()) {
+      throw new Error('Código inválido ou expirado')
+    }
+
+    const passwordHash = await hashPassword(data.newPassword)
+    await db
+      .update(users)
+      .set({ passwordHash, resetToken: null, resetExpiresAt: null })
+      .where(eq(users.id, user.id))
+
+    return { ok: true }
+  })

@@ -7,6 +7,8 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   role: text('role').notNull().default('operator'),
   createdAt: bigint('created_at', { mode: 'number' }).notNull(),
+  resetToken: text('reset_token'),
+  resetExpiresAt: bigint('reset_expires_at', { mode: 'number' }),
 })
 
 export type User = typeof users.$inferSelect
