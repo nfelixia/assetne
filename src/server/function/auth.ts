@@ -1,10 +1,13 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getWebRequest } from '@tanstack/react-start/server'
+import { getCookies } from '@tanstack/react-start/server'
 import { eq } from 'drizzle-orm'
 import * as z from 'zod'
 import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto'
 import { promisify } from 'node:util'
 import { db } from '~/db'
+import { users } from '~/db/schema/user.schema'
+import { createSessionToken, verifySessionToken, type SessionUser } from '~/lib/auth/session'
+import { generateId } from '~/utils/id-generator'
 
 const scryptAsync = promisify(scrypt)
 
@@ -19,16 +22,6 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
   const buf = (await scryptAsync(password, salt, 64)) as Buffer
   return timingSafeEqual(buf, Buffer.from(hash, 'hex'))
 }
-import { users } from '~/db/schema/user.schema'
-import {
-  createSessionToken,
-  verifySessionToken,
-  getSessionCookieHeader,
-  clearSessionCookieHeader,
-  getTokenFromCookieString,
-  type SessionUser,
-} from '~/lib/auth/session'
-import { generateId } from '~/utils/id-generator'
 
 export const loginFn = createServerFn({ method: 'POST' })
   .validator(z.object({ username: z.string(), password: z.string() }))
@@ -50,7 +43,6 @@ export const loginFn = createServerFn({ method: 'POST' })
     }
 
     const token = await createSessionToken(sessionUser)
-
     return { token, user: sessionUser }
   })
 
@@ -59,9 +51,8 @@ export const logoutFn = createServerFn({ method: 'POST' }).handler(async () => {
 })
 
 export const getSessionFn = createServerFn({ method: 'GET' }).handler(async () => {
-  const request = getWebRequest()
-  const cookie = request?.headers.get('cookie') ?? null
-  const token = getTokenFromCookieString(cookie)
+  const cookies = getCookies()
+  const token = cookies['assetne_session']
   if (!token) return null
   return verifySessionToken(token)
 })
