@@ -1,8 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { equipmentQueries } from '~/lib/equipment/queries'
 
 export const Route = createFileRoute('/(app)/reports')({
+  beforeLoad: ({ context }: any) => {
+    if (context?.session?.role !== 'admin') throw redirect({ to: '/dashboard' })
+  },
   loader: ({ context: { queryClient } }) =>
     queryClient.ensureQueryData(equipmentQueries.list()),
   component: ReportsPage,
