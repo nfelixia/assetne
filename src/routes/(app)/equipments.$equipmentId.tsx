@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from '@tanstack/react-router'
+import { createFileRoute, Link, notFound, useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { equipmentQueries, useSetAvailableMutation, useSetMaintenanceMutation, useDeleteEquipmentMutation, type EquipmentWithCheckout } from '~/lib/equipment/queries'
@@ -42,6 +42,8 @@ function EquipmentDetailPage() {
     () => history.filter((h) => h.equipmentId === equipmentId),
     [history, equipmentId],
   )
+
+  const navigate = useNavigate()
 
   const [showEdit,     setShowEdit]     = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
@@ -338,7 +340,9 @@ function EquipmentDetailPage() {
           <button
             onClick={() => {
               if (!confirm(`Remover "${eq.name}"? Esta ação não pode ser desfeita.`)) return
-              deleteMutation.mutate(eq.id)
+              deleteMutation.mutate(eq.id, {
+                onSuccess: () => navigate({ to: '/equipments' }),
+              })
             }}
             disabled={deleteMutation.isPending}
             className="text-[12px] transition-colors disabled:opacity-40"
@@ -364,6 +368,7 @@ function EquipmentDetailPage() {
       {showCheckin && (
         <CheckInModal
           equipment={equipment}
+          preSelectedId={eq.id}
           onClose={() => setShowCheckin(false)}
         />
       )}

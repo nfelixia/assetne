@@ -16,11 +16,16 @@ const CONDITION_OPTS: { value: ReturnCondition; label: string; color: string }[]
 export function CheckInModal({
   equipment,
   onClose,
+  preSelectedId,
 }: {
   equipment: EquipmentWithCheckout[]
   onClose: () => void
+  preSelectedId?: string
 }) {
-  const inUse = equipment.filter((e) => e.status === 'in-use' && e.activeCheckout)
+  const inUse = equipment.filter((e) =>
+    e.status === 'in-use' && e.activeCheckout &&
+    (!preSelectedId || e.id === preSelectedId)
+  )
 
   const [scanning,        setScanning]        = useState(false)
   const [conditions,      setConditions]      = useState<Record<string, ReturnCondition>>({})
