@@ -10,3 +10,15 @@ export const EQUIPMENT_CATEGORIES = [
 ] as const
 
 export type EquipmentCategory = (typeof EQUIPMENT_CATEGORIES)[number]
+
+export const PRODUCTION_CATEGORIES = [
+  'Figurino',
+  'Adereço',
+  'Cenografia',
+  'Maquiagem / Arte',
+  'Arte Gráfica',
+  'Consumível',
+  'Outro',
+] as const
+
+export type ProductionCategory = (typeof PRODUCTION_CATEGORIES)[number]

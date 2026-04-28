@@ -192,6 +192,53 @@ export function EquipmentDetailSkeleton() {
   )
 }
 
+/* ── Production ── */
+export function ProductionSkeleton() {
+  return (
+    <div className="animate-[fadeIn_0.2s_ease]">
+      <div className="mb-5 flex items-start justify-between">
+        <div className="space-y-2">
+          <Bone w="w-48" h="h-7" />
+          <Bone w="w-32" h="h-3.5" />
+        </div>
+        <Bone w="w-28" h="h-9" rounded="rounded-lg" />
+      </div>
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-lg p-2.5" style={{ background: '#0a0f1d', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <Bone w="w-16" h="h-3" />
+            <div className="mt-1.5"><Bone w="w-10" h="h-6" /></div>
+          </div>
+        ))}
+      </div>
+      <div className="mb-4 flex gap-2">
+        <Bone w="flex-1 min-w-[180px]" h="h-9" rounded="rounded-lg" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Bone key={i} w="w-24" h="h-9" rounded="rounded-lg" />
+        ))}
+      </div>
+      <div className="overflow-hidden rounded-xl" style={{ background: '#0a0f1d', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="px-4 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <Bone w="w-full" h="h-3" />
+        </div>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-3"
+            style={{ borderBottom: i < 5 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+            <Bone w="w-12" h="h-12" rounded="rounded-xl" />
+            <div className="flex-1 space-y-1.5">
+              <Bone w="w-2/5" h="h-3.5" />
+              <Bone w="w-1/4" h="h-2.5" />
+            </div>
+            <Bone w="w-16" h="h-3" />
+            <Bone w="w-16" h="h-5" rounded="rounded-full" />
+            <Bone w="w-20" h="h-6" rounded="rounded-lg" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* ── Reports ── */
 export function ReportsSkeleton() {
   return (
