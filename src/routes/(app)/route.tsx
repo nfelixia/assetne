@@ -1,7 +1,6 @@
 import { Link, Outlet, createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { getSessionFn, logoutFn } from '~/server/function/auth'
-import { ModeToggle } from '~/components/mode-toggle'
 import type { SessionUser } from '~/lib/auth/session'
 
 export const Route = createFileRoute('/(app)')({
@@ -150,9 +149,6 @@ function AppLayout() {
                 Online
               </span>
             </div>
-
-            {/* Theme toggle */}
-            <ModeToggle />
 
             {/* Mobile: avatar + logout */}
             <div className="flex items-center gap-2 md:hidden">

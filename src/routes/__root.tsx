@@ -8,7 +8,6 @@ import { DefaultCatchBoundary } from "~/components/DefaultCatchBoundary"
 import { NotFound } from "~/components/NotFound"
 import { ThemeInitScript } from "~/components/theme-init-script"
 import { ThemeProvider } from "~/components/theme-provider"
-import { getTheme } from "~/lib/theme"
 import type { Theme } from "~/lib/theme"
 import { seo } from "~/utils/seo"
 import appCss from "../styles/app.css?url"
@@ -17,7 +16,7 @@ import customCss from "../styles/custom.css?url"
 export const Route = createRootRouteWithContext<{
     queryClient: QueryClient
 }>()({
-    loader: () => getTheme(),
+    loader: () => 'dark' as const,
     head: () => ({
         meta: [
             {
@@ -93,7 +92,7 @@ function RootComponent() {
 function RootDocument({ children }: { children: React.ReactNode }) {
     const initial = Route.useLoaderData() as Theme
     return (
-        <html lang="pt-BR" className={initial === "system" ? "" : initial}>
+        <html lang="pt-BR" className="dark">
             <head>
                 <ThemeInitScript />
                 <HeadContent />
