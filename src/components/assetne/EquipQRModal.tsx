@@ -15,8 +15,11 @@ export function EquipQRModal({ equipment, onClose }: Props) {
     if (!content) return
     const win = window.open('', '_blank')
     if (!win) return
+    const safeName = equipment.name.replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
+    )
     win.document.write(`
-      <html><head><title>QR — ${equipment.name}</title></head>
+      <html><head><title>QR — ${safeName}</title></head>
       <body style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;background:#fff;">
         ${content.innerHTML}
       </body></html>

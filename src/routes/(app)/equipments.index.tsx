@@ -33,6 +33,7 @@ function EquipmentsPage() {
   const [qrEquipment,     setQrEquipment]     = useState<EquipmentWithCheckout | null>(null)
   const [editEquipment,   setEditEquipment]   = useState<EquipmentWithCheckout | null>(null)
   const [lightbox,        setLightbox]        = useState<{ src: string; alt: string } | null>(null)
+  const [deleteTarget,    setDeleteTarget]    = useState<EquipmentWithCheckout | null>(null)
 
   const filtered = equipment.filter((e) => {
     const q = normalizeText(search)
@@ -138,6 +139,7 @@ function EquipmentsPage() {
               isLast={i === filtered.length - 1}
               onShowQR={() => setQrEquipment(eq)}
               onEdit={() => setEditEquipment(eq)}
+              onRequestDelete={() => setDeleteTarget(eq)}
               onImageClick={eq.photoUrl ? () => setLightbox({ src: eq.photoUrl!, alt: `Foto de ${eq.name}` }) : undefined}
             />
           ))}
@@ -149,6 +151,7 @@ function EquipmentsPage() {
       {editEquipment   && <EditEquipModal equipment={editEquipment} onClose={() => setEditEquipment(null)} />}
       {qrEquipment     && <EquipQRModal equipment={qrEquipment} onClose={() => setQrEquipment(null)} />}
       {lightbox        && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
+      {deleteTarget    && <ConfirmDeleteModal equipment={deleteTarget} onClose={() => setDeleteTarget(null)} />}
     </div>
   )
 }
@@ -158,16 +161,17 @@ function EquipRow({
   isLast,
   onShowQR,
   onEdit,
+  onRequestDelete,
   onImageClick,
 }: {
   eq: EquipmentWithCheckout
   isLast: boolean
   onShowQR: () => void
   onEdit: () => void
+  onRequestDelete: () => void
   onImageClick?: () => void
 }) {
   const icon = CAT_ICON[eq.category] ?? '📦'
-  const deleteMutation  = useDeleteEquipmentMutation()
   const restoreMutation = useSetAvailableMutation()
 
   return (
@@ -255,18 +259,72 @@ function EquipRow({
         {eq.status === 'available' && (
           <ActionBtn
             title="Excluir"
-            disabled={deleteMutation.isPending}
-            onClick={(e) => {
-              e.stopPropagation()
-              if (!confirm(`Remover "${eq.name}"? Esta ação não pode ser desfeita.`)) return
-              deleteMutation.mutate(eq.id)
-            }}
+            onClick={(e) => { e.stopPropagation(); onRequestDelete() }}
             hoverColor="#ef4444"
             hoverBg="rgba(239,68,68,0.1)"
           >
             ✕
           </ActionBtn>
         )}
+      </div>
+    </div>
+  )
+}
+
+function ConfirmDeleteModal({
+  equipment,
+  onClose,
+}: {
+  equipment: EquipmentWithCheckout
+  onClose: () => void
+}) {
+  const deleteMutation = useDeleteEquipmentMutation()
+
+  const handleConfirm = async () => {
+    await deleteMutation.mutateAsync(equipment.id)
+    onClose()
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-sm rounded-xl p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+        style={{ background: '#0e1628', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        <div className="mb-1 flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full text-[18px]"
+            style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            ✕
+          </span>
+          <h2 className="text-[15px] font-semibold" style={{ color: '#eef2ff' }}>Remover equipamento</h2>
+        </div>
+        <p className="mb-5 mt-3 text-[13px] leading-relaxed" style={{ color: '#8ba4bf' }}>
+          Tem certeza que deseja remover <span style={{ color: '#eef2ff', fontWeight: 600 }}>"{equipment.name}"</span>?
+          Esta ação não pode ser desfeita.
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-lg px-4 py-2 text-[13px] transition-colors"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#8ba4bf' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#eef2ff')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#8ba4bf')}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={deleteMutation.isPending}
+            className="flex-1 rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', boxShadow: '0 4px 12px rgba(220,38,38,0.3)' }}
+          >
+            {deleteMutation.isPending ? 'Removendo...' : 'Sim, remover'}
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -62,9 +62,9 @@ export function useCreateEquipmentMutation() {
       condition: 'new' | 'good' | 'regular'
       photoUrl?: string | null
     }) => createEquipment({ data }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['equipment'] })
-      toast.success('Equipamento cadastrado com sucesso')
+      toast.success(`"${variables.name}" cadastrado com sucesso`)
     },
     onError: () => toast.error('Erro ao cadastrar equipamento'),
   })
@@ -107,9 +107,9 @@ export function useUpdateEquipmentMutation() {
       condition: 'new' | 'good' | 'regular'
       photoUrl?: string | null
     }) => updateEquipment({ data }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['equipment'] })
-      toast.success('Equipamento atualizado')
+      toast.success(`"${variables.name}" atualizado`)
     },
     onError: () => toast.error('Erro ao atualizar equipamento'),
   })

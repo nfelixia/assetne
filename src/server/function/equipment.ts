@@ -1,10 +1,19 @@
 import { createServerFn } from '@tanstack/react-start'
+import { getCookies } from '@tanstack/react-start/server'
 import { eq, isNull } from 'drizzle-orm'
 import * as z from 'zod'
 import { db } from '~/db'
 import { equipment } from '~/db/schema/equipment.schema'
 import { checkout } from '~/db/schema/checkout.schema'
+import { verifySessionToken } from '~/lib/auth/session'
 import { generateId } from '~/utils/id-generator'
+
+async function getCurrentSession() {
+  const cookies = getCookies()
+  const token = cookies['assetne_session']
+  if (!token) return null
+  return verifySessionToken(token)
+}
 
 const equipmentBaseSchema = z.object({
   name:         z.string().min(1, 'Nome obrigatório'),
@@ -67,12 +76,16 @@ export const createEquipment = createServerFn({ method: 'POST' })
 export const setEquipmentMaintenance = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => z.object({ id: z.string() }).parse(d))
   .handler(async ({ data }) => {
+    const session = await getCurrentSession()
+    if (session?.role !== 'admin') throw new Error('Apenas administradores podem alterar o status de manutenção')
     await db.update(equipment).set({ status: 'maintenance' }).where(eq(equipment.id, data.id))
   })
 
 export const setEquipmentAvailable = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => z.object({ id: z.string() }).parse(d))
   .handler(async ({ data }) => {
+    const session = await getCurrentSession()
+    if (session?.role !== 'admin') throw new Error('Apenas administradores podem alterar o status do equipamento')
     await db.update(equipment).set({ status: 'available' }).where(eq(equipment.id, data.id))
   })
 

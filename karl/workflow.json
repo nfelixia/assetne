@@ -1,0 +1,737 @@
+{
+  "name": "KARL - Assessor Financeiro",
+  "nodes": [
+    {
+      "id": "node-webhook",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "karl",
+        "responseMode": "lastNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-normalize",
+      "name": "Normalizar Entrada",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "phone",
+              "value": "={{ $json.data?.key?.remoteJid?.replace('@s.whatsapp.net', '').replace('@g.us', '') || $json.phone || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "message",
+              "value": "={{ $json.data?.message?.conversation || $json.data?.message?.extendedTextMessage?.text || $json.body || $json.message || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-ai",
+      "name": "Interpretar com IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"temperature\": 0,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"COLE AQUI O CONTEÚDO DE prompt.txt, substituindo {{DATA_ATUAL}} por: \" + $now.toISO()\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Normalizar Entrada').first().json.message }}\"\n    }\n  ]\n}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SUBSTITUA_PELO_ID_DA_CREDENCIAL",
+          "name": "OpenAI API Key"
+        }
+      }
+    },
+    {
+      "id": "node-parse",
+      "name": "Parse JSON da IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Parse JSON da IA' de code-nodes.js\nreturn [{ json: {} }];"
+      }
+    },
+    {
+      "id": "node-switch",
+      "name": "Switch Intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1120, 300],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.intent }}", "rightValue": "registrar_saida", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.intent }}", "rightValue": "registrar_entrada", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.intent }}", "rightValue": "registrar_conta_pagar", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.intent }}", "rightValue": "registrar_conta_receber", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.intent }}", "rightValue": "consultar_gastos", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.intent }}", "rightValue": "consultar_entradas", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.intent }}", "rightValue": "consultar_saldo", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.intent }}", "rightValue": "consultar_contas_pagar", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.intent }}", "rightValue": "consultar_contas_receber", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.intent }}", "rightValue": "gerar_resumo", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "conditions": [{ "leftValue": "={{ $json.intent }}", "rightValue": "corrigir_ultimo_lancamento", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "fallbackOutput": "extra",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-prep-lanc",
+      "name": "Preparar Lancamento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 100],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Preparar Lancamento' de code-nodes.js\nreturn [{ json: {} }];"
+      }
+    },
+    {
+      "id": "node-save-lanc",
+      "name": "Salvar em Lancamentos",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1560, 100],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Lancamentos",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SUBSTITUA_PELO_ID_DA_CREDENCIAL_GOOGLE",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "node-resp-lanc",
+      "name": "Resposta Lancamento",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 100],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Resposta Lancamento' de code-nodes.js\nreturn [{ json: { resposta: 'ok', phone: '' } }];"
+      }
+    },
+    {
+      "id": "node-prep-pagar",
+      "name": "Preparar Conta Pagar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 340],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Preparar Conta Pagar' de code-nodes.js\nreturn [{ json: {} }];"
+      }
+    },
+    {
+      "id": "node-save-pagar",
+      "name": "Salvar em Contas Pagar",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1560, 340],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Contas_Pagar",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SUBSTITUA_PELO_ID_DA_CREDENCIAL_GOOGLE",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "node-resp-pagar",
+      "name": "Resposta Conta Pagar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 340],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Resposta Conta Pagar' de code-nodes.js\nreturn [{ json: { resposta: 'ok', phone: '' } }];"
+      }
+    },
+    {
+      "id": "node-prep-receber",
+      "name": "Preparar Conta Receber",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 580],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Preparar Conta Receber' de code-nodes.js\nreturn [{ json: {} }];"
+      }
+    },
+    {
+      "id": "node-save-receber",
+      "name": "Salvar em Contas Receber",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1560, 580],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Contas_Receber",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SUBSTITUA_PELO_ID_DA_CREDENCIAL_GOOGLE",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "node-resp-receber",
+      "name": "Resposta Conta Receber",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 580],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Resposta Conta Receber' de code-nodes.js\nreturn [{ json: { resposta: 'ok', phone: '' } }];"
+      }
+    },
+    {
+      "id": "node-read-lanc-gastos",
+      "name": "Ler Lancamentos Gastos",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1340, 820],
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Lancamentos",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SUBSTITUA_PELO_ID_DA_CREDENCIAL_GOOGLE",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "node-calc-gastos",
+      "name": "Calcular Gastos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 820],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Calcular Gastos' de code-nodes.js\nreturn [{ json: { resposta: 'ok', phone: '' } }];"
+      }
+    },
+    {
+      "id": "node-read-lanc-entradas",
+      "name": "Ler Lancamentos Entradas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1340, 1060],
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Lancamentos",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SUBSTITUA_PELO_ID_DA_CREDENCIAL_GOOGLE",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "node-calc-entradas",
+      "name": "Calcular Entradas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 1060],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Calcular Entradas' de code-nodes.js\nreturn [{ json: { resposta: 'ok', phone: '' } }];"
+      }
+    },
+    {
+      "id": "node-read-lanc-saldo",
+      "name": "Ler Lancamentos Saldo",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1340, 1300],
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Lancamentos",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SUBSTITUA_PELO_ID_DA_CREDENCIAL_GOOGLE",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "node-calc-saldo",
+      "name": "Calcular Saldo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 1300],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Calcular Saldo' de code-nodes.js\nreturn [{ json: { resposta: 'ok', phone: '' } }];"
+      }
+    },
+    {
+      "id": "node-read-pagar",
+      "name": "Ler Contas Pagar",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1340, 1540],
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Contas_Pagar",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SUBSTITUA_PELO_ID_DA_CREDENCIAL_GOOGLE",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "node-list-pagar",
+      "name": "Listar Contas Pagar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 1540],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Listar Contas Pagar' de code-nodes.js\nreturn [{ json: { resposta: 'ok', phone: '' } }];"
+      }
+    },
+    {
+      "id": "node-read-receber",
+      "name": "Ler Contas Receber",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1340, 1780],
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Contas_Receber",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SUBSTITUA_PELO_ID_DA_CREDENCIAL_GOOGLE",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "node-list-receber",
+      "name": "Listar Contas Receber",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 1780],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Listar Contas Receber' de code-nodes.js\nreturn [{ json: { resposta: 'ok', phone: '' } }];"
+      }
+    },
+    {
+      "id": "node-read-resumo",
+      "name": "Ler Lancamentos Resumo",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1340, 2020],
+      "parameters": {
+        "operation": "getAll",
+        "documentId": {
+          "__rl": true,
+          "value": "COLE_AQUI_O_ID_DA_PLANILHA",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Lancamentos",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SUBSTITUA_PELO_ID_DA_CREDENCIAL_GOOGLE",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "id": "node-calc-resumo",
+      "name": "Calcular Resumo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 2020],
+      "parameters": {
+        "jsCode": "// Cole aqui o código da seção 'Calcular Resumo' de code-nodes.js\nreturn [{ json: { resposta: 'ok', phone: '' } }];"
+      }
+    },
+    {
+      "id": "node-resp-corrigir",
+      "name": "Resposta Corrigir",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1340, 2260],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "resposta",
+              "value": "Ainda não consigo corrigir automaticamente.\n\nEssa função estará disponível em breve.",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "phone",
+              "value": "={{ $('Normalizar Entrada').first().json.phone }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-resp-unknown",
+      "name": "Resposta Desconhecida",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1340, 2500],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "u1",
+              "name": "resposta",
+              "value": "={{ 'Não consegui registrar isso ainda.\\n\\n' + ($('Parse JSON da IA').first().json.pergunta || 'Pode tentar de outro jeito?') }}",
+              "type": "string"
+            },
+            {
+              "id": "u2",
+              "name": "phone",
+              "value": "={{ $('Normalizar Entrada').first().json.phone }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-send",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 1300],
+      "parameters": {
+        "method": "POST",
+        "url": "=http://SEU_SERVIDOR:8080/message/sendText/NOME_DA_INSTANCIA",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $json.phone }}\",\n  \"text\": \"{{ $json.resposta }}\"\n}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [[{ "node": "Normalizar Entrada", "type": "main", "index": 0 }]]
+    },
+    "Normalizar Entrada": {
+      "main": [[{ "node": "Interpretar com IA", "type": "main", "index": 0 }]]
+    },
+    "Interpretar com IA": {
+      "main": [[{ "node": "Parse JSON da IA", "type": "main", "index": 0 }]]
+    },
+    "Parse JSON da IA": {
+      "main": [[{ "node": "Switch Intent", "type": "main", "index": 0 }]]
+    },
+    "Switch Intent": {
+      "main": [
+        [{ "node": "Preparar Lancamento", "type": "main", "index": 0 }],
+        [{ "node": "Preparar Lancamento", "type": "main", "index": 0 }],
+        [{ "node": "Preparar Conta Pagar", "type": "main", "index": 0 }],
+        [{ "node": "Preparar Conta Receber", "type": "main", "index": 0 }],
+        [{ "node": "Ler Lancamentos Gastos", "type": "main", "index": 0 }],
+        [{ "node": "Ler Lancamentos Entradas", "type": "main", "index": 0 }],
+        [{ "node": "Ler Lancamentos Saldo", "type": "main", "index": 0 }],
+        [{ "node": "Ler Contas Pagar", "type": "main", "index": 0 }],
+        [{ "node": "Ler Contas Receber", "type": "main", "index": 0 }],
+        [{ "node": "Ler Lancamentos Resumo", "type": "main", "index": 0 }],
+        [{ "node": "Resposta Corrigir", "type": "main", "index": 0 }],
+        [{ "node": "Resposta Desconhecida", "type": "main", "index": 0 }]
+      ]
+    },
+    "Preparar Lancamento": {
+      "main": [[{ "node": "Salvar em Lancamentos", "type": "main", "index": 0 }]]
+    },
+    "Salvar em Lancamentos": {
+      "main": [[{ "node": "Resposta Lancamento", "type": "main", "index": 0 }]]
+    },
+    "Resposta Lancamento": {
+      "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Preparar Conta Pagar": {
+      "main": [[{ "node": "Salvar em Contas Pagar", "type": "main", "index": 0 }]]
+    },
+    "Salvar em Contas Pagar": {
+      "main": [[{ "node": "Resposta Conta Pagar", "type": "main", "index": 0 }]]
+    },
+    "Resposta Conta Pagar": {
+      "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Preparar Conta Receber": {
+      "main": [[{ "node": "Salvar em Contas Receber", "type": "main", "index": 0 }]]
+    },
+    "Salvar em Contas Receber": {
+      "main": [[{ "node": "Resposta Conta Receber", "type": "main", "index": 0 }]]
+    },
+    "Resposta Conta Receber": {
+      "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Ler Lancamentos Gastos": {
+      "main": [[{ "node": "Calcular Gastos", "type": "main", "index": 0 }]]
+    },
+    "Calcular Gastos": {
+      "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Ler Lancamentos Entradas": {
+      "main": [[{ "node": "Calcular Entradas", "type": "main", "index": 0 }]]
+    },
+    "Calcular Entradas": {
+      "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Ler Lancamentos Saldo": {
+      "main": [[{ "node": "Calcular Saldo", "type": "main", "index": 0 }]]
+    },
+    "Calcular Saldo": {
+      "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Ler Contas Pagar": {
+      "main": [[{ "node": "Listar Contas Pagar", "type": "main", "index": 0 }]]
+    },
+    "Listar Contas Pagar": {
+      "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Ler Contas Receber": {
+      "main": [[{ "node": "Listar Contas Receber", "type": "main", "index": 0 }]]
+    },
+    "Listar Contas Receber": {
+      "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Ler Lancamentos Resumo": {
+      "main": [[{ "node": "Calcular Resumo", "type": "main", "index": 0 }]]
+    },
+    "Calcular Resumo": {
+      "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Resposta Corrigir": {
+      "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Resposta Desconhecida": {
+      "main": [[{ "node": "Enviar WhatsApp", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "errorWorkflow": ""
+  },
+  "active": false,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

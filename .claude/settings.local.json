@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit *)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(pnpm db:push)",
+      "Bash(pnpm tsc *)",
+      "Bash(pnpm add *)",
+      "Bash(node scripts/gen-icons.mjs)",
+      "Bash(pnpm remove *)"
+    ]
+  }
+}

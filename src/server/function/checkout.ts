@@ -28,22 +28,24 @@ export const createCheckout = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const session = await getCurrentSession()
     const now = Date.now()
-    for (const eqId of data.equipmentIds) {
-      await db.insert(checkout).values({
-        id: generateId('checkout'),
-        equipmentId: eqId,
-        responsible: data.responsible,
-        responsibleRole: data.responsibleRole ?? null,
-        project: data.project,
-        expectedReturn: data.expectedReturn ?? null,
-        checkedOutAt: now,
-        checkedOutByUserId: session?.id ?? null,
-        checkedInAt: null,
-        returnCondition: null,
-        notes: null,
-      })
-      await db.update(equipment).set({ status: 'in-use' }).where(eq(equipment.id, eqId))
-    }
+    await db.transaction(async (tx) => {
+      for (const eqId of data.equipmentIds) {
+        await tx.insert(checkout).values({
+          id: generateId('checkout'),
+          equipmentId: eqId,
+          responsible: data.responsible,
+          responsibleRole: data.responsibleRole ?? null,
+          project: data.project,
+          expectedReturn: data.expectedReturn ?? null,
+          checkedOutAt: now,
+          checkedOutByUserId: session?.id ?? null,
+          checkedInAt: null,
+          returnCondition: null,
+          notes: null,
+        })
+        await tx.update(equipment).set({ status: 'in-use' }).where(eq(equipment.id, eqId))
+      }
+    })
   })
 
 const checkinItemSchema = z.object({
@@ -61,6 +63,12 @@ export const createCheckin = createServerFn({ method: 'POST' })
     const [record] = await db.select().from(checkout).where(eq(checkout.id, data.checkoutId))
     if (!record) throw new Error('Registro de checkout não encontrado')
 
+    // Prevent re-checkin of already returned items
+    if (record.checkedInAt !== null) throw new Error('Este equipamento já foi devolvido')
+
+    // Validate that the checkoutId and equipmentId are consistent
+    if (record.equipmentId !== data.equipmentId) throw new Error('Dados inconsistentes na devolução')
+
     if (session.role !== 'admin') {
       const owned = record.checkedOutByUserId
         ? record.checkedOutByUserId === session.id
@@ -75,20 +83,22 @@ export const createCheckin = createServerFn({ method: 'POST' })
     const now = Date.now()
     const newStatus = data.returnCondition === 'major' ? 'maintenance' : 'available'
 
-    await db
-      .update(checkout)
-      .set({
-        checkedInAt: now,
-        returnCondition: data.returnCondition,
-        checkedInByUserId: session.id,
-        checkedInByUserName: session.name,
-      })
-      .where(eq(checkout.id, data.checkoutId))
+    await db.transaction(async (tx) => {
+      await tx
+        .update(checkout)
+        .set({
+          checkedInAt: now,
+          returnCondition: data.returnCondition,
+          checkedInByUserId: session.id,
+          checkedInByUserName: session.name,
+        })
+        .where(eq(checkout.id, data.checkoutId))
 
-    await db
-      .update(equipment)
-      .set({ status: newStatus })
-      .where(eq(equipment.id, data.equipmentId))
+      await tx
+        .update(equipment)
+        .set({ status: newStatus })
+        .where(eq(equipment.id, data.equipmentId))
+    })
   })
 
 export const getCheckoutHistory = createServerFn({ method: 'GET' }).handler(async () => {
@@ -112,7 +122,7 @@ export const getCheckoutHistory = createServerFn({ method: 'GET' }).handler(asyn
     .from(checkout)
     .leftJoin(equipment, eq(checkout.equipmentId, equipment.id))
     .orderBy(desc(checkout.checkedOutAt))
-    .limit(300)
+    .limit(1000)
 
   return rows
 })

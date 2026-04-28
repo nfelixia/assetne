@@ -359,11 +359,18 @@ export function CheckInModal({
         </div>
       )}
 
+      {displayedItems.length > 0 && reviewedCount < displayedItems.length && (
+        <div className="mb-2 rounded-md border border-[#e3b341]/20 bg-[#e3b341]/[0.06] px-3 py-2 text-[11px]" style={{ color: '#e3b341' }}>
+          Selecione a condição de todos os {displayedItems.length} item{displayedItems.length !== 1 ? 's' : ''} antes de confirmar
+          {reviewedCount > 0 && ` (${displayedItems.length - reviewedCount} pendente${displayedItems.length - reviewedCount !== 1 ? 's' : ''})`}
+        </div>
+      )}
+
       <ModalFooter
         onClose={onClose}
         onConfirm={handleBatchConfirm}
         confirmLabel="Confirmar Devolução"
-        disabled={displayedItems.length === 0 || reviewedCount === 0}
+        disabled={displayedItems.length === 0 || reviewedCount !== displayedItems.length}
         loading={batchMutation.isPending}
       />
     </Modal>

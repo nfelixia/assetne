@@ -4,6 +4,8 @@ import { Modal, ModalFooter } from './Modal'
 import { useCreateEquipmentMutation } from '~/lib/equipment/queries'
 import { useCreateClientMutation } from '~/lib/clients/queries'
 
+const MAX_IMPORT_ROWS = 200
+
 type ImportType = 'equipment' | 'clients'
 
 type EquipRow = {
@@ -62,6 +64,7 @@ export function ImportExcelModal({
               condicao:  String(r['Condição'] || r['Condicao'] || r['condicao'] || r['condição'] || 'bom').trim(),
             }))
             .filter((r) => r.nome.length > 0)
+            .slice(0, MAX_IMPORT_ROWS)
           setRows(parsed)
         } else {
           const parsed: ClientRow[] = json
@@ -69,6 +72,7 @@ export function ImportExcelModal({
               nome: String(r['Nome'] || r['nome'] || r['NOME'] || '').trim(),
             }))
             .filter((r) => r.nome.length > 0)
+            .slice(0, MAX_IMPORT_ROWS)
           setRows(parsed)
         }
       } catch {
@@ -188,6 +192,9 @@ export function ImportExcelModal({
               {rows.length > 20 && (
                 <div className="px-3 py-2 text-[11px] text-[#6e7681]">
                   + {rows.length - 20} linha(s) adicionais
+                  {rows.length >= MAX_IMPORT_ROWS && (
+                    <span className="ml-1 text-[#f59e0b]">(limite de {MAX_IMPORT_ROWS} linhas aplicado)</span>
+                  )}
                 </div>
               )}
             </div>
