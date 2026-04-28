@@ -30,6 +30,7 @@ export type EquipmentWithCheckout = {
     project: string
     expectedReturn: string | null
     checkedOutAt: number
+    checkedOutByUserId: string | null
   } | null
 }
 

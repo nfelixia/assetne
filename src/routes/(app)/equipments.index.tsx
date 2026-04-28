@@ -8,6 +8,7 @@ import { EquipQRModal } from '~/components/assetne/EquipQRModal'
 import { ImportExcelModal } from '~/components/assetne/ImportExcelModal'
 import { StatusBadge } from '~/components/assetne/StatusBadge'
 import { CAT_ICON } from '~/components/assetne/utils'
+import { ImageLightbox } from '~/components/assetne/ImageLightbox'
 import { displayEquipmentValue, normalizeText } from '~/utils/format'
 import { EquipmentsSkeleton } from '~/components/assetne/Skeleton'
 
@@ -31,6 +32,7 @@ function EquipmentsPage() {
   const [showImportModal, setShowImportModal] = useState(false)
   const [qrEquipment,     setQrEquipment]     = useState<EquipmentWithCheckout | null>(null)
   const [editEquipment,   setEditEquipment]   = useState<EquipmentWithCheckout | null>(null)
+  const [lightbox,        setLightbox]        = useState<{ src: string; alt: string } | null>(null)
 
   const filtered = equipment.filter((e) => {
     const q = normalizeText(search)
@@ -136,6 +138,7 @@ function EquipmentsPage() {
               isLast={i === filtered.length - 1}
               onShowQR={() => setQrEquipment(eq)}
               onEdit={() => setEditEquipment(eq)}
+              onImageClick={eq.photoUrl ? () => setLightbox({ src: eq.photoUrl!, alt: `Foto de ${eq.name}` }) : undefined}
             />
           ))}
         </div>
@@ -145,6 +148,7 @@ function EquipmentsPage() {
       {showImportModal && <ImportExcelModal type="equipment" onClose={() => setShowImportModal(false)} />}
       {editEquipment   && <EditEquipModal equipment={editEquipment} onClose={() => setEditEquipment(null)} />}
       {qrEquipment     && <EquipQRModal equipment={qrEquipment} onClose={() => setQrEquipment(null)} />}
+      {lightbox        && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
     </div>
   )
 }
@@ -154,11 +158,13 @@ function EquipRow({
   isLast,
   onShowQR,
   onEdit,
+  onImageClick,
 }: {
   eq: EquipmentWithCheckout
   isLast: boolean
   onShowQR: () => void
   onEdit: () => void
+  onImageClick?: () => void
 }) {
   const icon = CAT_ICON[eq.category] ?? '📦'
   const deleteMutation  = useDeleteEquipmentMutation()
@@ -177,11 +183,13 @@ function EquipRow({
       {/* 1. Name + icon */}
       <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
         <div
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[15px]"
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[20px] ${onImageClick ? 'cursor-pointer' : ''}`}
           style={{ background: '#0e1628', border: '1px solid rgba(255,255,255,0.06)' }}
+          onClick={(e) => { if (onImageClick) { e.preventDefault(); e.stopPropagation(); onImageClick() } }}
+          title={onImageClick ? 'Ampliar imagem' : undefined}
         >
           {eq.photoUrl ? (
-            <img src={eq.photoUrl} alt={eq.name} className="h-full w-full rounded-lg object-cover" />
+            <img src={eq.photoUrl} alt={`Foto de ${eq.name}`} className="h-full w-full rounded-xl object-cover transition-opacity hover:opacity-85" />
           ) : (
             icon
           )}

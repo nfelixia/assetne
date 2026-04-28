@@ -9,7 +9,10 @@ export const checkout = pgTable('checkout', {
   project: text('project').notNull(),
   expectedReturn: text('expected_return'),
   checkedOutAt: bigint('checked_out_at', { mode: 'number' }).notNull(),
+  checkedOutByUserId: text('checked_out_by_user_id'),
   checkedInAt: bigint('checked_in_at', { mode: 'number' }),
+  checkedInByUserId: text('checked_in_by_user_id'),
+  checkedInByUserName: text('checked_in_by_user_name'),
   returnCondition: text('return_condition'),
   notes: text('notes'),
 })

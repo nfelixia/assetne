@@ -6,10 +6,12 @@ import { checkoutHistoryQuery } from '~/lib/checkout/queries'
 import { EditEquipModal } from '~/components/assetne/EditEquipModal'
 import { CheckOutModal } from '~/components/assetne/CheckOutModal'
 import { CheckInModal } from '~/components/assetne/CheckInModal'
+import { ImageLightbox } from '~/components/assetne/ImageLightbox'
 import { StatusBadge } from '~/components/assetne/StatusBadge'
 import { CAT_ICON } from '~/components/assetne/utils'
 import { displayEquipmentValue } from '~/utils/format'
 import { EquipmentDetailSkeleton } from '~/components/assetne/Skeleton'
+import type { SessionUser } from '~/lib/auth/session'
 
 export const Route = createFileRoute('/(app)/equipments/$equipmentId')({
   loader: ({ context: { queryClient } }) =>
@@ -44,10 +46,12 @@ function EquipmentDetailPage() {
   )
 
   const navigate = useNavigate()
+  const { session } = Route.useRouteContext() as { session: SessionUser }
 
   const [showEdit,     setShowEdit]     = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
   const [showCheckin,  setShowCheckin]  = useState(false)
+  const [lightbox,     setLightbox]     = useState(false)
 
   const maintenanceMutation = useSetMaintenanceMutation()
   const restoreMutation     = useSetAvailableMutation()
@@ -84,11 +88,13 @@ function EquipmentDetailPage() {
         <div className="flex flex-wrap items-start gap-4">
           {/* Icon / photo */}
           <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl text-[28px]"
+            className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-xl text-[28px] ${eq.photoUrl ? 'cursor-pointer' : ''}`}
             style={{ background: '#0e1628', border: '1px solid rgba(255,255,255,0.08)' }}
+            onClick={() => eq.photoUrl && setLightbox(true)}
+            title={eq.photoUrl ? 'Ampliar imagem' : undefined}
           >
             {eq.photoUrl ? (
-              <img src={eq.photoUrl} alt={eq.name} className="h-full w-full rounded-xl object-cover" />
+              <img src={eq.photoUrl} alt={`Foto de ${eq.name}`} className="h-full w-full rounded-xl object-cover transition-opacity hover:opacity-85" />
             ) : (
               icon
             )}
@@ -369,8 +375,12 @@ function EquipmentDetailPage() {
         <CheckInModal
           equipment={equipment}
           preSelectedId={eq.id}
+          session={session}
           onClose={() => setShowCheckin(false)}
         />
+      )}
+      {lightbox && eq.photoUrl && (
+        <ImageLightbox src={eq.photoUrl} alt={`Foto de ${eq.name}`} onClose={() => setLightbox(false)} />
       )}
     </div>
   )

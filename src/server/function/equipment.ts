@@ -26,10 +26,23 @@ export const getEquipmentWithCheckouts = createServerFn({ method: 'GET' }).handl
 
   const checkoutMap = new Map(activeCheckouts.map((c) => [c.equipmentId, c]))
 
-  return equipmentList.map((eq) => ({
-    ...eq,
-    activeCheckout: checkoutMap.get(eq.id) ?? null,
-  }))
+  return equipmentList.map((eq) => {
+    const c = checkoutMap.get(eq.id)
+    return {
+      ...eq,
+      activeCheckout: c
+        ? {
+            id: c.id,
+            responsible: c.responsible,
+            responsibleRole: c.responsibleRole,
+            project: c.project,
+            expectedReturn: c.expectedReturn,
+            checkedOutAt: c.checkedOutAt,
+            checkedOutByUserId: c.checkedOutByUserId,
+          }
+        : null,
+    }
+  })
 })
 
 export const createEquipment = createServerFn({ method: 'POST' })

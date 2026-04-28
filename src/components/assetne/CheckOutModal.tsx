@@ -278,21 +278,23 @@ export function CheckOutModal({
 
               {/* Items */}
               {!isCollapsed && items.map((eq, i) => {
-                const sel = selected.includes(eq.id)
+                const sel  = selected.includes(eq.id)
+                const icon = CAT_ICON[cat] ?? '📦'
                 return (
                   <div
                     key={eq.id}
                     onClick={() => toggle(eq.id)}
-                    className={`flex cursor-pointer items-center gap-2.5 px-3.5 py-2.5 transition-colors ${
+                    className={`flex cursor-pointer items-center gap-2.5 px-3.5 py-2 transition-colors ${
                       i < items.length - 1 ? 'border-b border-white/[0.04]' : ''
                     } ${sel ? 'bg-[#58a6ff]/[0.06]' : 'hover:bg-white/[0.03]'}`}
                   >
-                    <div
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] text-[10px] text-white ${
-                        sel ? 'bg-[#1f6feb]' : 'border border-white/10'
-                      }`}
-                    >
+                    <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] text-[10px] text-white ${sel ? 'bg-[#1f6feb]' : 'border border-white/10'}`}>
                       {sel ? '✓' : ''}
+                    </div>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[16px]" style={{ background: '#0e1628', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      {eq.photoUrl
+                        ? <img src={eq.photoUrl} alt={`Foto de ${eq.name}`} className="h-full w-full rounded-lg object-cover" />
+                        : icon}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className={`text-[13px] font-medium ${sel ? 'text-[#58a6ff]' : 'text-[#e6edf3]'}`}>

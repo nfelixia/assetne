@@ -53,7 +53,7 @@ export function useCheckinMutation() {
       qc.invalidateQueries({ queryKey: ['equipment'] })
       toast.success('Devolução registrada com sucesso')
     },
-    onError: () => toast.error('Erro ao registrar devolução'),
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Erro ao registrar devolução'),
   })
 }
 
@@ -66,6 +66,6 @@ export function useCheckinScanMutation() {
       returnCondition: 'perfect' | 'minor' | 'major'
     }) => createCheckin({ data }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['equipment'] }),
-    onError:   () => toast.error('Erro ao registrar devolução'),
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Erro ao registrar devolução'),
   })
 }
