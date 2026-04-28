@@ -88,7 +88,7 @@ function UsersPanel() {
   const [username,    setUsername]    = useState('')
   const [name,        setName]        = useState('')
   const [password,    setPassword]    = useState('')
-  const [role,        setRole]        = useState<'admin' | 'operator'>('operator')
+  const [role,        setRole]        = useState<'admin' | 'operator' | 'produtor'>('operator')
   const [resetingId,  setResetingId]  = useState<string | null>(null)
   const [newPass,     setNewPass]     = useState('')
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
@@ -140,7 +140,7 @@ function UsersPanel() {
         <div className="flex gap-2">
           <select
             value={role}
-            onChange={(e) => setRole(e.target.value as 'admin' | 'operator')}
+            onChange={(e) => setRole(e.target.value as 'admin' | 'operator' | 'produtor')}
             className="flex-1 rounded-lg px-3 py-2 text-[13px] outline-none transition-all"
             style={{
               background: '#060c1a',
@@ -149,6 +149,7 @@ function UsersPanel() {
             }}
           >
             <option value="operator">Operador</option>
+            <option value="produtor">Produtor</option>
             <option value="admin">Administrador</option>
           </select>
           <PrimaryBtn
@@ -181,7 +182,7 @@ function UsersPanel() {
               <div className="min-w-0 flex-1">
                 <div className="text-[13px] font-medium" style={{ color: '#eef2ff' }}>{u.name}</div>
                 <div className="text-[11px]" style={{ color: '#4a6380' }}>
-                  @{u.username} · {u.role === 'admin' ? 'Administrador' : 'Operador'}
+                  @{u.username} · {{ admin: 'Administrador', produtor: 'Produtor', operator: 'Operador' }[u.role as string] ?? 'Operador'}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">

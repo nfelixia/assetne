@@ -39,7 +39,7 @@ export const loginFn = createServerFn({ method: 'POST' })
       id: user.id,
       username: user.username,
       name: user.name,
-      role: user.role as 'admin' | 'operator',
+      role: user.role as 'admin' | 'operator' | 'produtor',
     }
 
     const token = await createSessionToken(sessionUser)
@@ -63,7 +63,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
       username: z.string().min(3),
       name: z.string().min(2),
       password: z.string().min(6),
-      role: z.enum(['admin', 'operator']),
+      role: z.enum(['admin', 'operator', 'produtor']),
     }).parse(d),
   )
   .handler(async ({ data }) => {

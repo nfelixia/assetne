@@ -8,6 +8,7 @@ import { ProductionCheckOutModal } from '~/components/assetne/ProductionCheckOut
 import { ProductionCheckInModal } from '~/components/assetne/ProductionCheckInModal'
 import { ImageLightbox } from '~/components/assetne/ImageLightbox'
 import { ProductionSkeleton } from '~/components/assetne/Skeleton'
+import { ImportExcelModal } from '~/components/assetne/ImportExcelModal'
 import { PROD_CAT_ICON } from '~/components/assetne/utils'
 import { normalizeText } from '~/utils/format'
 
@@ -34,6 +35,7 @@ function ProductionPage() {
   const [search,       setSearch]       = useState('')
   const [filter,       setFilter]       = useState('all')
   const [showNew,      setShowNew]      = useState(false)
+  const [showImport,   setShowImport]   = useState(false)
   const [editItem,     setEditItem]     = useState<ProductionItemWithUsage | null>(null)
   const [checkoutItem, setCheckoutItem] = useState<ProductionItemWithUsage | null>(null)
   const [checkinItem,  setCheckinItem]  = useState<ProductionItemWithUsage | null>(null)
@@ -71,13 +73,24 @@ function ProductionPage() {
             {emUso > 0 && <> · <span style={{ color: '#f59e0b' }}>{emUso} em uso</span></>}
           </p>
         </div>
-        <button
-          onClick={() => setShowNew(true)}
-          className="rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all"
-          style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 16px rgba(37,99,235,0.3)' }}
-        >
-          + Novo item
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="rounded-lg px-4 py-2 text-[13px] font-medium transition-colors"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#8ba4bf' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#eef2ff')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#8ba4bf')}
+          >
+            ↑ Excel
+          </button>
+          <button
+            onClick={() => setShowNew(true)}
+            className="rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all"
+            style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 16px rgba(37,99,235,0.3)' }}
+          >
+            + Novo item
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -158,7 +171,8 @@ function ProductionPage() {
       )}
 
       {showNew      && <NewProductionItemModal onClose={() => setShowNew(false)} />}
-      {editItem     && <EditProductionItemModal item={editItem} onClose={() => setEditItem(null)} />}
+      {showImport   && <ImportExcelModal type="production" onClose={() => setShowImport(false)} />}
+      {editItem     && <EditProductionItemModal item={editItem} onClose={() => setEditItem(null)} />
       {checkoutItem && <ProductionCheckOutModal item={checkoutItem} onClose={() => setCheckoutItem(null)} />}
       {checkinItem  && <ProductionCheckInModal item={checkinItem} onClose={() => setCheckinItem(null)} />}
       {lightbox     && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}

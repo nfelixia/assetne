@@ -3,10 +3,11 @@ import * as XLSX from 'xlsx'
 import { Modal, ModalFooter } from './Modal'
 import { useCreateEquipmentMutation } from '~/lib/equipment/queries'
 import { useCreateClientMutation } from '~/lib/clients/queries'
+import { useCreateProductionItemMutation } from '~/lib/production/queries'
 
 const MAX_IMPORT_ROWS = 200
 
-type ImportType = 'equipment' | 'clients'
+type ImportType = 'equipment' | 'clients' | 'production'
 
 type EquipRow = {
   nome: string
@@ -16,14 +17,30 @@ type EquipRow = {
   condicao?: string
 }
 type ClientRow = { nome: string }
+type ProdRow = {
+  nome: string
+  categoria: string
+  quantidade: number
+  condicao?: string
+  localizacao?: string
+  codigo?: string
+  notas?: string
+}
 
-type ParsedRow = EquipRow | ClientRow
+type ParsedRow = EquipRow | ClientRow | ProdRow
 
 function normalizeCondition(raw: string): 'new' | 'good' | 'regular' {
   const v = raw?.toLowerCase().trim()
   if (v === 'novo' || v === 'new')     return 'new'
   if (v === 'regular')                 return 'regular'
   return 'good'
+}
+
+function normalizeProdCondition(raw: string): 'bom' | 'regular' | 'ruim' {
+  const v = raw?.toLowerCase().trim()
+  if (v === 'ruim' || v === 'bad')     return 'ruim'
+  if (v === 'regular')                 return 'regular'
+  return 'bom'
 }
 
 export function ImportExcelModal({
@@ -41,6 +58,7 @@ export function ImportExcelModal({
 
   const createEquip  = useCreateEquipmentMutation()
   const createClient = useCreateClientMutation()
+  const createProd   = useCreateProductionItemMutation()
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -62,6 +80,20 @@ export function ImportExcelModal({
               valor:     String(r['Valor'] || r['valor'] || r['VALOR'] || 'R$ 0').trim(),
               serie:     String(r['Série'] || r['Serie'] || r['série'] || r['serie'] || r['SN'] || '').trim() || undefined,
               condicao:  String(r['Condição'] || r['Condicao'] || r['condicao'] || r['condição'] || 'bom').trim(),
+            }))
+            .filter((r) => r.nome.length > 0)
+            .slice(0, MAX_IMPORT_ROWS)
+          setRows(parsed)
+        } else if (type === 'production') {
+          const parsed: ProdRow[] = json
+            .map((r) => ({
+              nome:        String(r['Nome'] || r['nome'] || r['NOME'] || '').trim(),
+              categoria:   String(r['Categoria'] || r['categoria'] || r['CATEGORIA'] || 'Outro').trim(),
+              quantidade:  Math.max(1, parseInt(String(r['Quantidade'] || r['quantidade'] || r['Qtd'] || r['qtd'] || '1')) || 1),
+              condicao:    String(r['Condição'] || r['Condicao'] || r['condicao'] || r['condição'] || 'bom').trim(),
+              localizacao: String(r['Localização'] || r['Localizacao'] || r['localizacao'] || '').trim() || undefined,
+              codigo:      String(r['Código'] || r['Codigo'] || r['codigo'] || r['código'] || '').trim() || undefined,
+              notas:       String(r['Notas'] || r['notas'] || r['Observações'] || r['observacoes'] || '').trim() || undefined,
             }))
             .filter((r) => r.nome.length > 0)
             .slice(0, MAX_IMPORT_ROWS)
@@ -95,6 +127,18 @@ export function ImportExcelModal({
             condition:    normalizeCondition(row.condicao ?? ''),
           })
         }
+      } else if (type === 'production') {
+        for (const row of rows as ProdRow[]) {
+          await createProd.mutateAsync({
+            name:          row.nome,
+            category:      row.categoria,
+            totalQty:      row.quantidade,
+            condition:     normalizeProdCondition(row.condicao ?? ''),
+            location:      row.localizacao,
+            codigoInterno: row.codigo,
+            notes:         row.notas,
+          })
+        }
       } else {
         for (const row of rows as ClientRow[]) {
           await createClient.mutateAsync(row.nome)
@@ -106,7 +150,7 @@ export function ImportExcelModal({
     }
   }
 
-  const title = type === 'equipment' ? 'Importar Equipamentos' : 'Importar Clientes'
+  const title = type === 'equipment' ? 'Importar Equipamentos' : type === 'production' ? 'Importar Itens de Produção' : 'Importar Clientes'
 
   return (
     <Modal title={title} onClose={onClose} width={520}>
@@ -135,6 +179,16 @@ export function ImportExcelModal({
                 <span className="font-['JetBrains_Mono'] text-[#58a6ff]">Valor</span>,{' '}
                 <span className="font-['JetBrains_Mono'] text-[#6e7681]">Série (opc.)</span>,{' '}
                 <span className="font-['JetBrains_Mono'] text-[#6e7681]">Condição (opc.)</span>
+              </>
+            ) : type === 'production' ? (
+              <>
+                Colunas esperadas:{' '}
+                <span className="font-['JetBrains_Mono'] text-[#58a6ff]">Nome</span>,{' '}
+                <span className="font-['JetBrains_Mono'] text-[#58a6ff]">Categoria</span>,{' '}
+                <span className="font-['JetBrains_Mono'] text-[#6e7681]">Quantidade (opc.)</span>,{' '}
+                <span className="font-['JetBrains_Mono'] text-[#6e7681]">Condição (opc.)</span>,{' '}
+                <span className="font-['JetBrains_Mono'] text-[#6e7681]">Localização (opc.)</span>,{' '}
+                <span className="font-['JetBrains_Mono'] text-[#6e7681]">Código (opc.)</span>
               </>
             ) : (
               <>
@@ -178,11 +232,17 @@ export function ImportExcelModal({
                   className={`flex items-center gap-3 px-3 py-2 text-[12px] ${i < rows.length - 1 ? 'border-b border-white/[0.06]' : ''}`}
                 >
                   <span className="shrink-0 font-['JetBrains_Mono'] text-[#6e7681]">{i + 1}</span>
-                  {'categoria' in row ? (
+                  {'valor' in row ? (
                     <>
                       <span className="font-medium text-[#e6edf3]">{(row as EquipRow).nome}</span>
                       <span className="text-[#6e7681]">{(row as EquipRow).categoria}</span>
                       <span className="ml-auto font-['JetBrains_Mono'] text-[#8b949e]">{(row as EquipRow).valor}</span>
+                    </>
+                  ) : 'quantidade' in row ? (
+                    <>
+                      <span className="font-medium text-[#e6edf3]">{(row as ProdRow).nome}</span>
+                      <span className="text-[#6e7681]">{(row as ProdRow).categoria}</span>
+                      <span className="ml-auto font-['JetBrains_Mono'] text-[#8b949e]">{(row as ProdRow).quantidade}x</span>
                     </>
                   ) : (
                     <span className="font-medium text-[#e6edf3]">{(row as ClientRow).nome}</span>

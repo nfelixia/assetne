@@ -12,21 +12,34 @@ export const Route = createFileRoute('/(app)')({
   component: AppLayout,
 })
 
-const NAV_ALL = [
-  { to: '/dashboard',  label: 'Dashboard',    icon: HomeIcon },
-  { to: '/equipments', label: 'Equipamentos',  icon: PackageIcon },
-  { to: '/production', label: 'Acervo',        icon: ArchiveIcon },
+const NAV_BASE = [
+  { to: '/dashboard',  label: 'Dashboard',   icon: HomeIcon },
+  { to: '/equipments', label: 'Equipamentos', icon: PackageIcon },
+]
+const NAV_PRODUCTION = [
+  { to: '/production', label: 'Acervo',       icon: ArchiveIcon },
 ]
 const NAV_ADMIN = [
-  { to: '/reports',    label: 'Relatórios',    icon: ChartIcon },
-  { to: '/settings',   label: 'Configurações', icon: GearIcon },
+  { to: '/reports',    label: 'Relatórios',   icon: ChartIcon },
+  { to: '/settings',   label: 'Configurações',icon: GearIcon },
 ]
+
+const ROLE_LABEL: Record<string, string> = {
+  admin:    'Administrador',
+  produtor: 'Produtor',
+  operator: 'Operador',
+}
 
 function AppLayout() {
   const { session } = Route.useRouteContext() as { session: SessionUser }
   const router = useRouter()
-  const isAdmin = session.role === 'admin'
-  const nav = isAdmin ? [...NAV_ALL, ...NAV_ADMIN] : NAV_ALL
+  const isAdmin    = session.role === 'admin'
+  const isProdutor = session.role === 'produtor'
+  const nav = isAdmin
+    ? [...NAV_BASE, ...NAV_PRODUCTION, ...NAV_ADMIN]
+    : isProdutor
+      ? [...NAV_BASE, ...NAV_PRODUCTION]
+      : NAV_BASE
 
   async function handleLogout() {
     await logoutFn()
@@ -96,7 +109,7 @@ function AppLayout() {
                   {session.name}
                 </div>
                 <div className="text-[10px] text-muted-foreground">
-                  {isAdmin ? 'Administrador' : 'Operador'}
+                  {ROLE_LABEL[session.role] ?? 'Operador'}
                 </div>
               </div>
             </div>
