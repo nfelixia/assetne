@@ -1,8 +1,11 @@
 import { useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Modal, ModalFooter } from './Modal'
 import { useCreateEquipmentMutation, useUploadEquipmentPhotoMutation } from '~/lib/equipment/queries'
+import type { EquipmentWithCheckout } from '~/lib/equipment/queries'
+import { EQUIPMENT_CATEGORIES } from '~/utils/constants'
+import { normalizeText } from '~/utils/format'
 
-const CATEGORIES = ['Câmera', 'Estabilizador', 'Iluminação', 'Áudio', 'Outro']
 const CONDITIONS: { value: 'new' | 'good' | 'regular'; label: string }[] = [
   { value: 'new',     label: 'Novo' },
   { value: 'good',    label: 'Bom' },
@@ -35,12 +38,14 @@ export function NewEquipModal({ onClose }: { onClose: () => void }) {
   const [category,     setCategory]     = useState('')
   const [value,        setValue]        = useState('')
   const [serialNumber, setSerialNumber] = useState('')
+  const [codigo,       setCodigo]       = useState('')
   const [condition,    setCondition]    = useState<'new' | 'good' | 'regular'>('new')
   const [photoData,    setPhotoData]    = useState<{ base64: string; mimeType: string; fileName: string } | null>(null)
 
   const mutation       = useCreateEquipmentMutation()
   const uploadMutation = useUploadEquipmentPhotoMutation()
   const fileRef        = useRef<HTMLInputElement>(null)
+  const qc             = useQueryClient()
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -49,13 +54,26 @@ export function NewEquipModal({ onClose }: { onClose: () => void }) {
     setPhotoData(data)
   }
 
+  const handleNameBlur = () => {
+    const normalized = name.trim().replace(/\s+/g, ' ').toUpperCase()
+    if (normalized) setName(normalized)
+  }
+
   const handleConfirm = async () => {
+    const existing = qc.getQueryData<EquipmentWithCheckout[]>(['equipment']) ?? []
+    const normalizedInput = normalizeText(name)
+    const dup = existing.find((e) => normalizeText(e.name) === normalizedInput)
+    if (dup) {
+      const proceed = confirm(`Já existe um equipamento com nome similar: "${dup.name}". Deseja continuar?`)
+      if (!proceed) return
+    }
+
     let photoUrl: string | null = null
     if (photoData) {
       const res = await uploadMutation.mutateAsync(photoData)
       photoUrl = res.url
     }
-    await mutation.mutateAsync({ name, category, value, serialNumber, condition, photoUrl })
+    await mutation.mutateAsync({ name, category, value, serialNumber, codigo, condition, photoUrl })
     onClose()
   }
 
@@ -94,6 +112,7 @@ export function NewEquipModal({ onClose }: { onClose: () => void }) {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
+          onBlur={handleNameBlur}
           placeholder="Ex: Canon EOS R5"
           className="w-full rounded-md border border-white/10 bg-[#161b22] px-3 py-2 text-[13px] text-[#e6edf3] placeholder-[#6e7681] outline-none focus:border-[#58a6ff]"
         />
@@ -106,7 +125,7 @@ export function NewEquipModal({ onClose }: { onClose: () => void }) {
           className="w-full cursor-pointer rounded-md border border-white/10 bg-[#161b22] px-3 py-2 text-[13px] text-[#e6edf3] outline-none focus:border-[#58a6ff]"
         >
           <option value="">Selecionar...</option>
-          {CATEGORIES.map((c) => (
+          {EQUIPMENT_CATEGORIES.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
@@ -117,6 +136,15 @@ export function NewEquipModal({ onClose }: { onClose: () => void }) {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="R$ 0,00"
+          className="w-full rounded-md border border-white/10 bg-[#161b22] px-3 py-2 text-[13px] text-[#e6edf3] placeholder-[#6e7681] outline-none focus:border-[#58a6ff]"
+        />
+      </Field>
+
+      <Field label="Código / Etiqueta (opcional)">
+        <input
+          value={codigo}
+          onChange={(e) => setCodigo(e.target.value)}
+          placeholder="Ex: CAM-001, LEN-002, AUD-003"
           className="w-full rounded-md border border-white/10 bg-[#161b22] px-3 py-2 text-[13px] text-[#e6edf3] placeholder-[#6e7681] outline-none focus:border-[#58a6ff]"
         />
       </Field>

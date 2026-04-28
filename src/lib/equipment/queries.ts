@@ -18,6 +18,7 @@ export type EquipmentWithCheckout = {
   category: string
   value: string
   serialNumber: string | null
+  codigo: string | null
   status: string
   condition: string
   photoUrl: string | null
@@ -56,6 +57,7 @@ export function useCreateEquipmentMutation() {
       category: string
       value: string
       serialNumber?: string
+      codigo?: string
       condition: 'new' | 'good' | 'regular'
       photoUrl?: string | null
     }) => createEquipment({ data }),
@@ -100,6 +102,7 @@ export function useUpdateEquipmentMutation() {
       category: string
       value: string
       serialNumber?: string
+      codigo?: string
       condition: 'new' | 'good' | 'regular'
       photoUrl?: string | null
     }) => updateEquipment({ data }),

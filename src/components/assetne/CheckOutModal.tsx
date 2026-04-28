@@ -7,23 +7,30 @@ import { useCheckoutMutation, useCheckoutScanMutation } from '~/lib/checkout/que
 import { clientsQueries } from '~/lib/clients/queries'
 import { collaboratorsQueries } from '~/lib/collaborators/queries'
 import type { EquipmentWithCheckout } from '~/lib/equipment/queries'
+import { EQUIPMENT_CATEGORIES } from '~/utils/constants'
+import { normalizeText } from '~/utils/format'
 
 type Phase = 'form' | 'scanning'
 
 export function CheckOutModal({
   equipment,
   onClose,
+  preSelectedId,
 }: {
   equipment: EquipmentWithCheckout[]
   onClose: () => void
+  preSelectedId?: string
 }) {
   const [phase,          setPhase]          = useState<Phase>('form')
-  const [selected,       setSelected]       = useState<string[]>([])
+  const [selected,       setSelected]       = useState<string[]>(preSelectedId ? [preSelectedId] : [])
   const [collaboratorId, setCollaboratorId] = useState('')
   const [clientId,       setClientId]       = useState('')
   const [workDate,       setWorkDate]       = useState(new Date().toISOString().split('T')[0])
   const [scanLog,        setScanLog]        = useState<{ id: string; name: string }[]>([])
   const [scanFeedback,   setScanFeedback]   = useState<{ text: string; ok: boolean } | null>(null)
+  const [search,         setSearch]         = useState('')
+  const [catFilter,      setCatFilter]      = useState('Todas')
+  const [collapsed,      setCollapsed]      = useState<Set<string>>(new Set())
 
   const batchMutation = useCheckoutMutation()
   const scanMutation  = useCheckoutScanMutation()
@@ -41,6 +48,31 @@ export function CheckOutModal({
 
   const toggle = (id: string) =>
     setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]))
+
+  const toggleCollapse = (cat: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      next.has(cat) ? next.delete(cat) : next.add(cat)
+      return next
+    })
+
+  const filteredAvailable = available.filter((e) => {
+    const q = normalizeText(search)
+    const matchSearch = !q || (
+      normalizeText(e.name).includes(q) ||
+      normalizeText(e.category).includes(q) ||
+      (e.codigo ? normalizeText(e.codigo).includes(q) : false)
+    )
+    const matchCat = catFilter === 'Todas' || e.category === catFilter
+    return matchSearch && matchCat
+  })
+
+  const grouped = filteredAvailable.reduce<Record<string, EquipmentWithCheckout[]>>((acc, eq) => {
+    const cat = eq.category || 'Outro'
+    if (!acc[cat]) acc[cat] = []
+    acc[cat].push(eq)
+    return acc
+  }, {})
 
   const handleQRScan = async (scannedId: string) => {
     const eq = available.find((e) => e.id === scannedId)
@@ -92,7 +124,6 @@ export function CheckOutModal({
         title="Registrar Saída"
         hint={`${selectedCollab?.name ?? ''} · ${selectedClient?.name ?? ''}`}
       >
-        {/* Feedback */}
         {scanFeedback && (
           <div
             className={`mb-3 rounded-md px-3 py-2 text-[13px] font-medium ${
@@ -105,7 +136,6 @@ export function CheckOutModal({
           </div>
         )}
 
-        {/* Scanned log */}
         {scanLog.length > 0 && (
           <div className="mb-3">
             <div className="mb-1.5 text-[11px] font-medium text-[#6e7681]">
@@ -182,7 +212,7 @@ export function CheckOutModal({
         />
       </Field>
 
-      {/* Scan button — primary action */}
+      {/* Scan button */}
       <button
         onClick={() => setPhase('scanning')}
         disabled={!bookingReady}
@@ -192,43 +222,86 @@ export function CheckOutModal({
       </button>
 
       {/* Divider */}
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-3 flex items-center gap-3">
         <div className="h-px flex-1 bg-white/10" />
         <span className="text-[11px] text-[#6e7681]">ou selecione manualmente</span>
         <div className="h-px flex-1 bg-white/10" />
       </div>
 
-      {/* Manual equipment list */}
-      <div className="mb-2.5 overflow-hidden rounded-lg border border-white/10 bg-[#0d1117]">
-        {available.length === 0 && (
+      {/* Search + category filter */}
+      <div className="mb-2 flex gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar equipamento, categoria ou código..."
+          className="flex-1 rounded-md border border-white/10 bg-[#161b22] px-3 py-1.5 text-[12px] text-[#e6edf3] placeholder-[#6e7681] outline-none focus:border-[#58a6ff]"
+        />
+        <select
+          value={catFilter}
+          onChange={(e) => setCatFilter(e.target.value)}
+          className="rounded-md border border-white/10 bg-[#161b22] px-2 py-1.5 text-[12px] text-[#e6edf3] outline-none focus:border-[#58a6ff]"
+        >
+          <option value="Todas">Todas</option>
+          {EQUIPMENT_CATEGORIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Grouped equipment list */}
+      <div className="mb-2.5 max-h-[280px] overflow-y-auto rounded-lg border border-white/10 bg-[#0d1117]">
+        {Object.keys(grouped).length === 0 && (
           <div className="p-4 text-center text-[13px] text-[#6e7681]">
             Nenhum equipamento disponível
           </div>
         )}
-        {available.map((eq, i) => {
-          const sel = selected.includes(eq.id)
+        {Object.entries(grouped).map(([cat, items]) => {
+          const isCollapsed = collapsed.has(cat)
           return (
-            <div
-              key={eq.id}
-              onClick={() => toggle(eq.id)}
-              className={`flex cursor-pointer items-center gap-2.5 px-3.5 py-2.5 transition-colors ${
-                i < available.length - 1 ? 'border-b border-white/10' : ''
-              } ${sel ? 'bg-[#58a6ff]/[0.06]' : 'hover:bg-white/[0.03]'}`}
-            >
-              <div
-                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] text-[10px] text-white ${
-                  sel ? 'bg-[#1f6feb]' : 'border border-white/10'
-                }`}
+            <div key={cat}>
+              {/* Category header */}
+              <button
+                type="button"
+                onClick={() => toggleCollapse(cat)}
+                className="flex w-full items-center justify-between px-3.5 py-2 text-[11px] font-semibold uppercase tracking-wider transition-colors hover:bg-white/[0.03]"
+                style={{ color: '#8b949e', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
               >
-                {sel ? '✓' : ''}
-              </div>
-              <span className="text-[15px]">{CAT_ICON[eq.category] ?? '📦'}</span>
-              <div className="flex-1">
-                <div className={`text-[13px] font-medium ${sel ? 'text-[#58a6ff]' : 'text-[#e6edf3]'}`}>
-                  {eq.name}
-                </div>
-                <div className="text-[11px] text-[#6e7681]">{eq.category}</div>
-              </div>
+                <span className="flex items-center gap-1.5">
+                  <span>{CAT_ICON[cat] ?? '📦'}</span>
+                  <span>{cat}</span>
+                  <span className="ml-1 rounded-full px-1.5 py-0.5 text-[10px]" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    {items.length}
+                  </span>
+                </span>
+                <span>{isCollapsed ? '▶' : '▼'}</span>
+              </button>
+
+              {/* Items */}
+              {!isCollapsed && items.map((eq, i) => {
+                const sel = selected.includes(eq.id)
+                return (
+                  <div
+                    key={eq.id}
+                    onClick={() => toggle(eq.id)}
+                    className={`flex cursor-pointer items-center gap-2.5 px-3.5 py-2.5 transition-colors ${
+                      i < items.length - 1 ? 'border-b border-white/[0.04]' : ''
+                    } ${sel ? 'bg-[#58a6ff]/[0.06]' : 'hover:bg-white/[0.03]'}`}
+                  >
+                    <div
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] text-[10px] text-white ${
+                        sel ? 'bg-[#1f6feb]' : 'border border-white/10'
+                      }`}
+                    >
+                      {sel ? '✓' : ''}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-[13px] font-medium ${sel ? 'text-[#58a6ff]' : 'text-[#e6edf3]'}`}>
+                        {eq.name}{eq.codigo ? ` (#${eq.codigo})` : ''}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )
         })}

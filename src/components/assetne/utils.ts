@@ -1,6 +1,12 @@
 export const CAT_ICON: Record<string, string> = {
-  'Câmera':        '📷',
-  'Estabilizador': '🎥',
-  'Iluminação':    '💡',
-  'Áudio':         '🎙️',
+  'Câmera':             '📷',
+  'Lente':              '🔭',
+  'Áudio':              '🎙️',
+  'Iluminação':         '💡',
+  'Tripé / Suporte':    '🎬',
+  'Monitor / Gravador': '🖥️',
+  'Acessório':          '🔧',
+  'Outro':              '📦',
+  // Legacy
+  'Estabilizador':      '🎥',
 }

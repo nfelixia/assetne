@@ -11,6 +11,7 @@ const equipmentBaseSchema = z.object({
   category:     z.string().min(1, 'Categoria obrigatória'),
   value:        z.string().min(1, 'Valor obrigatório'),
   serialNumber: z.string().optional(),
+  codigo:       z.string().optional(),
   condition:    z.enum(['new', 'good', 'regular']),
   photoUrl:     z.string().nullable().optional(),
 })
@@ -40,6 +41,7 @@ export const createEquipment = createServerFn({ method: 'POST' })
       category:     data.category,
       value:        data.value,
       serialNumber: data.serialNumber ?? null,
+      codigo:       data.codigo ?? null,
       status:       'available' as const,
       condition:    data.condition,
       photoUrl:     data.photoUrl ?? null,
@@ -71,6 +73,7 @@ export const updateEquipment = createServerFn({ method: 'POST' })
         category:     data.category,
         value:        data.value,
         serialNumber: data.serialNumber ?? null,
+        codigo:       data.codigo ?? null,
         condition:    data.condition,
         photoUrl:     data.photoUrl ?? null,
       })

@@ -1,6 +1,7 @@
 import { Link, Outlet, createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { getSessionFn, logoutFn } from '~/server/function/auth'
+import { ModeToggle } from '~/components/mode-toggle'
 import type { SessionUser } from '~/lib/auth/session'
 
 export const Route = createFileRoute('/(app)')({
@@ -36,27 +37,19 @@ function AppLayout() {
   }
 
   return (
-    <div
-      className="flex h-[100dvh] overflow-hidden"
-      style={{
-        background: '#070b14',
-        color: '#e8edf5',
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      }}
+    <div className="flex h-[100dvh] overflow-hidden bg-background text-foreground"
+      style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
     >
       {/* ── Sidebar desktop ── */}
-      <aside
-        className="hidden md:flex w-[220px] shrink-0 flex-col"
-        style={{ background: '#0c1020', borderRight: '1px solid rgba(255,255,255,0.05)' }}
-      >
+      <aside className="hidden md:flex w-[220px] shrink-0 flex-col bg-sidebar border-r border-sidebar-border">
         {/* Logo */}
-        <div className="px-5 py-[18px]" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="px-5 py-[18px] border-b border-sidebar-border">
           <div className="flex items-center gap-2.5">
             <LogoIcon size={26} />
             <div>
               <div
-                className="text-[16px] font-bold leading-none"
-                style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#eef2ff', letterSpacing: '-0.3px' }}
+                className="text-[16px] font-bold leading-none text-sidebar-foreground"
+                style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: '-0.3px' }}
               >
                 AssetNE
               </div>
@@ -78,7 +71,7 @@ function AppLayout() {
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex items-center gap-3 my-0.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 text-[#4a6380] hover:bg-white/[0.04] hover:text-[#b8cddf] [&.active]:bg-[#162040] [&.active]:text-[#93c5fd]"
+                className="flex items-center gap-3 my-0.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 text-muted-foreground hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent [&.active]:text-sidebar-primary"
                 activeProps={{ className: 'active' }}
               >
                 <Icon size={16} />
@@ -89,7 +82,7 @@ function AppLayout() {
         </nav>
 
         {/* User */}
-        <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="px-4 py-3 border-t border-sidebar-border">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <div
@@ -99,10 +92,10 @@ function AppLayout() {
                 {session.name.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <div className="truncate text-[12px] font-medium" style={{ color: '#d6e4f0' }}>
+                <div className="truncate text-[12px] font-medium text-foreground">
                   {session.name}
                 </div>
-                <div className="text-[10px]" style={{ color: '#2b4266' }}>
+                <div className="text-[10px] text-muted-foreground">
                   {isAdmin ? 'Administrador' : 'Operador'}
                 </div>
               </div>
@@ -110,10 +103,7 @@ function AppLayout() {
             <button
               onClick={handleLogout}
               title="Sair"
-              className="shrink-0 p-1 transition-colors"
-              style={{ color: '#2b4266' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#2b4266')}
+              className="shrink-0 p-1 transition-colors text-muted-foreground hover:text-destructive"
             >
               <LogoutIcon />
             </button>
@@ -124,16 +114,13 @@ function AppLayout() {
       {/* ── Main ── */}
       <main className="flex flex-1 flex-col overflow-hidden min-w-0">
         {/* Topbar */}
-        <div
-          className="flex shrink-0 items-center justify-between px-4 md:px-6 py-[11px]"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(7,11,20,0.8)' }}
-        >
+        <div className="flex shrink-0 items-center justify-between px-4 md:px-6 py-[11px] border-b border-border bg-background/80 backdrop-blur-sm">
           {/* Mobile: logo */}
           <div className="flex items-center gap-2.5 md:hidden">
             <LogoIcon size={22} />
             <span
-              className="text-[16px] font-bold"
-              style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#eef2ff' }}
+              className="text-[16px] font-bold text-foreground"
+              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               AssetNE
             </span>
@@ -164,6 +151,9 @@ function AppLayout() {
               </span>
             </div>
 
+            {/* Theme toggle */}
+            <ModeToggle />
+
             {/* Mobile: avatar + logout */}
             <div className="flex items-center gap-2 md:hidden">
               <div
@@ -174,8 +164,7 @@ function AppLayout() {
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1"
-                style={{ color: '#2b4266' }}
+                className="p-1 text-muted-foreground"
               >
                 <LogoutIcon />
               </button>
@@ -197,10 +186,7 @@ function AppLayout() {
       </main>
 
       {/* ── Bottom nav mobile ── */}
-      <nav
-        className="fixed bottom-0 inset-x-0 md:hidden z-40"
-        style={{ background: '#0c1020', borderTop: '1px solid rgba(255,255,255,0.05)' }}
-      >
+      <nav className="fixed bottom-0 inset-x-0 md:hidden z-40 bg-sidebar border-t border-sidebar-border">
         <div className="flex h-16 items-center justify-around px-2">
           {nav.map((item) => {
             const Icon = item.icon
@@ -208,8 +194,7 @@ function AppLayout() {
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex flex-1 flex-col items-center justify-center gap-0.5 py-1 transition-colors [&.active]:text-[#60a5fa]"
-                style={{ color: '#2b4266' }}
+                className="flex flex-1 flex-col items-center justify-center gap-0.5 py-1 transition-colors text-muted-foreground [&.active]:text-sidebar-primary"
                 activeProps={{ className: 'active' }}
               >
                 <Icon size={20} />

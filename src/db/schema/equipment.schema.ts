@@ -6,6 +6,7 @@ export const equipment = pgTable('equipment', {
   category: text('category').notNull(),
   value: text('value').notNull(),
   serialNumber: text('serial_number'),
+  codigo: text('codigo'),
   status: text('status').notNull().default('available'),
   condition: text('condition').notNull().default('new'),
   photoUrl: text('photo_url'),

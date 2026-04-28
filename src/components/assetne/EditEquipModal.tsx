@@ -2,8 +2,8 @@ import { useRef, useState } from 'react'
 import { Modal, ModalFooter } from './Modal'
 import { useUpdateEquipmentMutation, useUploadEquipmentPhotoMutation } from '~/lib/equipment/queries'
 import type { EquipmentWithCheckout } from '~/lib/equipment/queries'
+import { EQUIPMENT_CATEGORIES } from '~/utils/constants'
 
-const CATEGORIES = ['Câmera', 'Estabilizador', 'Iluminação', 'Áudio', 'Outro']
 const CONDITIONS: { value: 'new' | 'good' | 'regular'; label: string }[] = [
   { value: 'new',     label: 'Novo' },
   { value: 'good',    label: 'Bom' },
@@ -42,6 +42,7 @@ export function EditEquipModal({
   const [category,     setCategory]     = useState(equipment.category)
   const [value,        setValue]        = useState(equipment.value)
   const [serialNumber, setSerialNumber] = useState(equipment.serialNumber ?? '')
+  const [codigo,       setCodigo]       = useState(equipment.codigo ?? '')
   const [condition,    setCondition]    = useState<'new' | 'good' | 'regular'>(
     (equipment.condition as 'new' | 'good' | 'regular') ?? 'good',
   )
@@ -58,6 +59,11 @@ export function EditEquipModal({
     setNewPhotoData(data)
   }
 
+  const handleNameBlur = () => {
+    const normalized = name.trim().replace(/\s+/g, ' ').toUpperCase()
+    if (normalized) setName(normalized)
+  }
+
   const handleConfirm = async () => {
     let photoUrl: string | null = equipment.photoUrl ?? null
     if (newPhotoData) {
@@ -70,6 +76,7 @@ export function EditEquipModal({
       category,
       value,
       serialNumber: serialNumber || undefined,
+      codigo: codigo || undefined,
       condition,
       photoUrl,
     })
@@ -78,6 +85,11 @@ export function EditEquipModal({
 
   const previewSrc = newPhotoData?.base64 ?? equipment.photoUrl ?? null
   const isLoading  = mutation.isPending || uploadMutation.isPending
+
+  // ensure legacy categories not in list still appear
+  const categoryOptions = EQUIPMENT_CATEGORIES.includes(category as any)
+    ? EQUIPMENT_CATEGORIES
+    : [...EQUIPMENT_CATEGORIES, category]
 
   return (
     <Modal title="Editar Equipamento" onClose={onClose}>
@@ -112,6 +124,7 @@ export function EditEquipModal({
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
+          onBlur={handleNameBlur}
           className="w-full rounded-md border border-white/10 bg-[#161b22] px-3 py-2 text-[13px] text-[#e6edf3] placeholder-[#6e7681] outline-none focus:border-[#58a6ff]"
         />
       </Field>
@@ -122,12 +135,9 @@ export function EditEquipModal({
           onChange={(e) => setCategory(e.target.value)}
           className="w-full cursor-pointer rounded-md border border-white/10 bg-[#161b22] px-3 py-2 text-[13px] text-[#e6edf3] outline-none focus:border-[#58a6ff]"
         >
-          {CATEGORIES.map((c) => (
+          {categoryOptions.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
-          {!CATEGORIES.includes(category) && (
-            <option value={category}>{category}</option>
-          )}
         </select>
       </Field>
 
@@ -136,6 +146,15 @@ export function EditEquipModal({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="R$ 0,00"
+          className="w-full rounded-md border border-white/10 bg-[#161b22] px-3 py-2 text-[13px] text-[#e6edf3] placeholder-[#6e7681] outline-none focus:border-[#58a6ff]"
+        />
+      </Field>
+
+      <Field label="Código / Etiqueta (opcional)">
+        <input
+          value={codigo}
+          onChange={(e) => setCodigo(e.target.value)}
+          placeholder="Ex: CAM-001, LEN-002, AUD-003"
           className="w-full rounded-md border border-white/10 bg-[#161b22] px-3 py-2 text-[13px] text-[#e6edf3] placeholder-[#6e7681] outline-none focus:border-[#58a6ff]"
         />
       </Field>
