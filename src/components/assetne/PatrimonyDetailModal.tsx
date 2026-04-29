@@ -13,12 +13,13 @@ import { PATRIMONY_MOVEMENT_LABELS } from '~/utils/constants'
 import { formatCurrency } from '~/utils/format'
 
 const STATUS_BADGE: Record<string, { label: string; color: string; bg: string }> = {
-  disponivel: { label: 'Disponível',  color: '#10b981', bg: 'rgba(16,185,129,0.1)'  },
-  em_uso:     { label: 'Em Uso',      color: '#3b82f6', bg: 'rgba(59,130,246,0.1)'  },
-  emprestado: { label: 'Emprestado',  color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)'  },
-  manutencao: { label: 'Manutenção',  color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
-  extraviado: { label: 'Extraviado',  color: '#ef4444', bg: 'rgba(239,68,68,0.1)'   },
-  baixado:    { label: 'Baixado',     color: '#6b7280', bg: 'rgba(107,114,128,0.1)' },
+  disponivel:          { label: 'Disponível',         color: '#10b981', bg: 'rgba(16,185,129,0.1)'  },
+  pendente_aprovacao:  { label: 'Aguard. aprovação',  color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
+  em_uso:              { label: 'Em Uso',             color: '#3b82f6', bg: 'rgba(59,130,246,0.1)'  },
+  emprestado:          { label: 'Emprestado',         color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)'  },
+  manutencao:          { label: 'Manutenção',         color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
+  extraviado:          { label: 'Extraviado',         color: '#ef4444', bg: 'rgba(239,68,68,0.1)'   },
+  baixado:             { label: 'Baixado',            color: '#6b7280', bg: 'rgba(107,114,128,0.1)' },
 }
 
 const CONDITION_LABEL: Record<string, string> = {
@@ -106,13 +107,15 @@ function HistoryTab({ itemId }: { itemId: string }) {
 export function PatrimonyDetailModal({
   item,
   isAdmin,
+  isGestorPatrimonio,
   onEdit,
   onCheckout,
   onCheckin,
   onClose,
 }: {
-  item:      PatrimonyItem
-  isAdmin:   boolean
+  item:               PatrimonyItem
+  isAdmin:            boolean
+  isGestorPatrimonio: boolean
   onEdit:    () => void
   onCheckout: () => void
   onCheckin:  () => void
@@ -131,9 +134,10 @@ export function PatrimonyDetailModal({
 
   const badge = STATUS_BADGE[item.status] ?? { label: item.status, color: '#8ba4bf', bg: 'rgba(255,255,255,0.05)' }
 
+  const isPendingApproval = item.status === 'pendente_aprovacao'
   const canCheckout = item.status === 'disponivel'
   const canCheckin  = item.status === 'em_uso' || item.status === 'emprestado'
-  const canMaint    = item.status !== 'manutencao' && item.status !== 'baixado'
+  const canMaint    = item.status !== 'manutencao' && item.status !== 'baixado' && !isPendingApproval
   const canRetMaint = item.status === 'manutencao'
 
   return (
@@ -176,6 +180,22 @@ export function PatrimonyDetailModal({
         </div>
       </div>
 
+      {/* Pending approval banner */}
+      {isPendingApproval && (
+        <div
+          className="mb-4 flex items-center gap-2 rounded-lg px-3 py-2.5 text-[12px]"
+          style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b' }}
+        >
+          <span>⏳</span>
+          <span>
+            <span className="font-semibold">Solicitação pendente</span>
+            {isAdmin || isGestorPatrimonio
+              ? ' — acesse a aba Aprovações para aprovar ou recusar.'
+              : ' — aguardando aprovação do gestor de patrimônio.'}
+          </span>
+        </div>
+      )}
+
       {/* Action buttons */}
       <div className="mb-4 flex flex-wrap gap-1.5">
         {canCheckout && (
@@ -202,7 +222,7 @@ export function PatrimonyDetailModal({
             Retornou da manutenção
           </button>
         )}
-        {isAdmin && (
+        {(isAdmin || isGestorPatrimonio) && (
           <button onClick={onEdit} className="rounded-lg px-3 py-1.5 text-[12px] font-medium"
             style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#8ba4bf' }}>
             Editar

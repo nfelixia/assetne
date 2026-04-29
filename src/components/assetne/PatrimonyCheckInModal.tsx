@@ -18,13 +18,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export function PatrimonyCheckInModal({
   item,
   isAdmin,
+  isGestorPatrimonio,
   currentUserId,
   onClose,
 }: {
-  item:          PatrimonyItem
-  isAdmin:       boolean
-  currentUserId: string
-  onClose:       () => void
+  item:               PatrimonyItem
+  isAdmin:            boolean
+  isGestorPatrimonio: boolean
+  currentUserId:      string
+  onClose:            () => void
 }) {
   const [conditionIn, setConditionIn] = useState(item.condition)
   const [newStatus,   setNewStatus]   = useState('disponivel')
@@ -32,7 +34,7 @@ export function PatrimonyCheckInModal({
 
   const checkinMut = useCheckInPatrimonyItemMutation()
 
-  const canReturn = isAdmin || item.currentResponsibleId === currentUserId
+  const canReturn = isAdmin || isGestorPatrimonio || item.currentResponsibleId === currentUserId
   const select = `${FIELD} appearance-none cursor-pointer`
 
   async function handleConfirm() {
@@ -69,7 +71,7 @@ export function PatrimonyCheckInModal({
         >
           <div className="mb-1 font-semibold">Acesso negado</div>
           <div style={{ color: '#f87171' }}>
-            Este item foi retirado por outro usuário. Apenas o responsável pela retirada ou um administrador pode realizar a devolução.
+            Este item está associado a outro usuário. Apenas o responsável, gestor de patrimônio ou administrador pode realizar a devolução.
           </div>
         </div>
       ) : (

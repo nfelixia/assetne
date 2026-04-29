@@ -1,9 +1,13 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getCookies } from '@tanstack/react-start/server'
-import { eq, desc, isNull } from 'drizzle-orm'
+import { eq, desc } from 'drizzle-orm'
 import * as z from 'zod'
 import { db } from '~/db'
-import { patrimonyItems, patrimonyMovements } from '~/db/schema/patrimony.schema'
+import {
+  patrimonyItems,
+  patrimonyMovements,
+  patrimonyWithdrawalRequests,
+} from '~/db/schema/patrimony.schema'
 import { verifySessionToken } from '~/lib/auth/session'
 import { generateId } from '~/utils/id-generator'
 
@@ -13,6 +17,12 @@ async function getSession() {
   if (!token) return null
   return verifySessionToken(token)
 }
+
+function isApprover(role: string) {
+  return role === 'admin' || role === 'gestor_patrimonio'
+}
+
+// ─── Item CRUD ────────────────────────────────────────────────────────────────
 
 const itemSchema = z.object({
   name:            z.string().min(1, 'Nome obrigatório'),
@@ -153,9 +163,12 @@ export const updatePatrimonyItem = createServerFn({ method: 'POST' })
 export const deletePatrimonyItem = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => z.object({ id: z.string() }).parse(d))
   .handler(async ({ data }) => {
+    await db.delete(patrimonyWithdrawalRequests).where(eq(patrimonyWithdrawalRequests.itemId, data.id))
     await db.delete(patrimonyMovements).where(eq(patrimonyMovements.itemId, data.id))
     await db.delete(patrimonyItems).where(eq(patrimonyItems.id, data.id))
   })
+
+// ─── Direct checkout (admin / gestor_patrimonio only) ─────────────────────────
 
 const checkoutSchema = z.object({
   itemId:             z.string(),
@@ -172,6 +185,9 @@ export const checkOutPatrimonyItem = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => checkoutSchema.parse(d))
   .handler(async ({ data }) => {
     const session = await getSession()
+    if (!session || !isApprover(session.role)) {
+      throw new Error('Apenas administradores e gestores de patrimônio podem registrar saída direta.')
+    }
 
     const [item] = await db.select().from(patrimonyItems).where(eq(patrimonyItems.id, data.itemId))
     if (!item) throw new Error('Item não encontrado')
@@ -188,8 +204,8 @@ export const checkOutPatrimonyItem = createServerFn({ method: 'POST' })
       newStatus,
       responsibleUserId:   data.responsibleUserId ?? null,
       responsibleUserName: data.responsibleName,
-      performedByUserId:   session?.id ?? null,
-      performedByUserName: session?.name ?? null,
+      performedByUserId:   session.id,
+      performedByUserName: session.name,
       projectOrClient:     data.projectOrClient ?? null,
       useType:             data.useType,
       expectedReturnDate:  data.expectedReturnDate ?? null,
@@ -209,6 +225,243 @@ export const checkOutPatrimonyItem = createServerFn({ method: 'POST' })
       .where(eq(patrimonyItems.id, data.itemId))
   })
 
+// ─── Withdrawal requests ──────────────────────────────────────────────────────
+
+const withdrawalRequestSchema = z.object({
+  itemId:             z.string(),
+  responsibleUserId:  z.string().optional(),
+  responsibleName:    z.string().min(1, 'Responsável obrigatório'),
+  useType:            z.string().min(1),
+  projectOrClient:    z.string().optional(),
+  expectedReturnDate: z.string().optional(),
+  conditionOut:       z.string().min(1),
+  notes:              z.string().optional(),
+})
+
+export const createWithdrawalRequest = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) => withdrawalRequestSchema.parse(d))
+  .handler(async ({ data }) => {
+    const session = await getSession()
+    if (!session) throw new Error('Sessão inválida')
+
+    const [item] = await db.select().from(patrimonyItems).where(eq(patrimonyItems.id, data.itemId))
+    if (!item) throw new Error('Item não encontrado')
+    if (item.status !== 'disponivel') throw new Error('Item não está disponível para retirada')
+
+    const now = Date.now()
+    const reqId = generateId('wreq')
+
+    await db.insert(patrimonyWithdrawalRequests).values({
+      id:                   reqId,
+      itemId:               data.itemId,
+      requestedByUserId:    session.id,
+      requestedByUserName:  session.name,
+      responsibleUserId:    data.responsibleUserId ?? null,
+      responsibleUserName:  data.responsibleName,
+      useType:              data.useType,
+      projectOrClient:      data.projectOrClient ?? null,
+      expectedReturnDate:   data.expectedReturnDate ?? null,
+      conditionOut:         data.conditionOut,
+      notes:                data.notes ?? null,
+      status:               'pending_approval',
+      createdAt:            now,
+      updatedAt:            now,
+    })
+
+    await db
+      .update(patrimonyItems)
+      .set({ status: 'pendente_aprovacao', updatedAt: now })
+      .where(eq(patrimonyItems.id, data.itemId))
+
+    await db.insert(patrimonyMovements).values({
+      id:                  generateId('pmvt'),
+      itemId:              data.itemId,
+      type:                'withdrawal_requested',
+      previousStatus:      'disponivel',
+      newStatus:           'pendente_aprovacao',
+      responsibleUserId:   data.responsibleUserId ?? null,
+      responsibleUserName: data.responsibleName,
+      performedByUserId:   session.id,
+      performedByUserName: session.name,
+      useType:             data.useType,
+      projectOrClient:     data.projectOrClient ?? null,
+      expectedReturnDate:  data.expectedReturnDate ?? null,
+      conditionOut:        data.conditionOut,
+      notes:               data.notes ?? null,
+      createdAt:           now,
+    })
+
+    return { id: reqId }
+  })
+
+export const getWithdrawalRequests = createServerFn({ method: 'GET' }).handler(async () => {
+  const session = await getSession()
+  if (!session) throw new Error('Sessão inválida')
+
+  if (isApprover(session.role)) {
+    return db
+      .select()
+      .from(patrimonyWithdrawalRequests)
+      .orderBy(desc(patrimonyWithdrawalRequests.createdAt))
+  }
+
+  return db
+    .select()
+    .from(patrimonyWithdrawalRequests)
+    .where(eq(patrimonyWithdrawalRequests.requestedByUserId, session.id))
+    .orderBy(desc(patrimonyWithdrawalRequests.createdAt))
+})
+
+export const approveWithdrawalRequest = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) => z.object({ requestId: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    const session = await getSession()
+    if (!session || !isApprover(session.role)) {
+      throw new Error('Sem permissão para aprovar solicitações')
+    }
+
+    const [req] = await db
+      .select()
+      .from(patrimonyWithdrawalRequests)
+      .where(eq(patrimonyWithdrawalRequests.id, data.requestId))
+    if (!req) throw new Error('Solicitação não encontrada')
+    if (req.status !== 'pending_approval') throw new Error('Solicitação não está pendente')
+
+    const newStatus = req.useType === 'emprestimo' ? 'emprestado' : 'em_uso'
+    const now = Date.now()
+
+    await db
+      .update(patrimonyWithdrawalRequests)
+      .set({
+        status:             'approved',
+        approvedByUserId:   session.id,
+        approvedByUserName: session.name,
+        approvedAt:         now,
+        updatedAt:          now,
+      })
+      .where(eq(patrimonyWithdrawalRequests.id, req.id))
+
+    await db.insert(patrimonyMovements).values({
+      id:                  generateId('pmvt'),
+      itemId:              req.itemId,
+      type:                'checked_out',
+      previousStatus:      'pendente_aprovacao',
+      newStatus,
+      responsibleUserId:   req.responsibleUserId ?? null,
+      responsibleUserName: req.responsibleUserName,
+      performedByUserId:   session.id,
+      performedByUserName: session.name,
+      projectOrClient:     req.projectOrClient ?? null,
+      useType:             req.useType,
+      expectedReturnDate:  req.expectedReturnDate ?? null,
+      conditionOut:        req.conditionOut,
+      notes:               req.notes ?? null,
+      createdAt:           now,
+    })
+
+    await db
+      .update(patrimonyItems)
+      .set({
+        status:                 newStatus,
+        currentResponsibleId:   req.responsibleUserId ?? null,
+        currentResponsibleName: req.responsibleUserName,
+        updatedAt:              now,
+      })
+      .where(eq(patrimonyItems.id, req.itemId))
+  })
+
+export const rejectWithdrawalRequest = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) =>
+    z.object({ requestId: z.string(), rejectionReason: z.string().optional() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const session = await getSession()
+    if (!session || !isApprover(session.role)) {
+      throw new Error('Sem permissão para recusar solicitações')
+    }
+
+    const [req] = await db
+      .select()
+      .from(patrimonyWithdrawalRequests)
+      .where(eq(patrimonyWithdrawalRequests.id, data.requestId))
+    if (!req) throw new Error('Solicitação não encontrada')
+    if (req.status !== 'pending_approval') throw new Error('Solicitação não está pendente')
+
+    const now = Date.now()
+
+    await db
+      .update(patrimonyWithdrawalRequests)
+      .set({
+        status:             'rejected',
+        rejectedByUserId:   session.id,
+        rejectedByUserName: session.name,
+        rejectedAt:         now,
+        rejectionReason:    data.rejectionReason ?? null,
+        updatedAt:          now,
+      })
+      .where(eq(patrimonyWithdrawalRequests.id, req.id))
+
+    await db.insert(patrimonyMovements).values({
+      id:                  generateId('pmvt'),
+      itemId:              req.itemId,
+      type:                'withdrawal_rejected',
+      previousStatus:      'pendente_aprovacao',
+      newStatus:           'disponivel',
+      performedByUserId:   session.id,
+      performedByUserName: session.name,
+      notes:               data.rejectionReason ?? null,
+      createdAt:           now,
+    })
+
+    await db
+      .update(patrimonyItems)
+      .set({ status: 'disponivel', updatedAt: now })
+      .where(eq(patrimonyItems.id, req.itemId))
+  })
+
+export const cancelWithdrawalRequest = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) => z.object({ requestId: z.string() }).parse(d))
+  .handler(async ({ data }) => {
+    const session = await getSession()
+    if (!session) throw new Error('Sessão inválida')
+
+    const [req] = await db
+      .select()
+      .from(patrimonyWithdrawalRequests)
+      .where(eq(patrimonyWithdrawalRequests.id, data.requestId))
+    if (!req) throw new Error('Solicitação não encontrada')
+    if (req.status !== 'pending_approval') throw new Error('Solicitação não está pendente')
+
+    if (!isApprover(session.role) && req.requestedByUserId !== session.id) {
+      throw new Error('Sem permissão para cancelar esta solicitação')
+    }
+
+    const now = Date.now()
+
+    await db
+      .update(patrimonyWithdrawalRequests)
+      .set({ status: 'cancelled', updatedAt: now })
+      .where(eq(patrimonyWithdrawalRequests.id, req.id))
+
+    await db.insert(patrimonyMovements).values({
+      id:                  generateId('pmvt'),
+      itemId:              req.itemId,
+      type:                'withdrawal_cancelled',
+      previousStatus:      'pendente_aprovacao',
+      newStatus:           'disponivel',
+      performedByUserId:   session.id,
+      performedByUserName: session.name,
+      createdAt:           now,
+    })
+
+    await db
+      .update(patrimonyItems)
+      .set({ status: 'disponivel', updatedAt: now })
+      .where(eq(patrimonyItems.id, req.itemId))
+  })
+
+// ─── Check-in ─────────────────────────────────────────────────────────────────
+
 const checkinSchema = z.object({
   itemId:      z.string(),
   conditionIn: z.string().min(1),
@@ -225,6 +478,12 @@ export const checkInPatrimonyItem = createServerFn({ method: 'POST' })
     const [item] = await db.select().from(patrimonyItems).where(eq(patrimonyItems.id, data.itemId))
     if (!item) throw new Error('Item não encontrado')
 
+    if (!isApprover(session.role) && item.currentResponsibleId !== session.id) {
+      throw new Error(
+        'Este item está associado a outro usuário. Apenas o responsável, gestor de patrimônio ou administrador pode realizar a devolução.',
+      )
+    }
+
     const activeMovement = await db
       .select()
       .from(patrimonyMovements)
@@ -232,12 +491,6 @@ export const checkInPatrimonyItem = createServerFn({ method: 'POST' })
       .orderBy(desc(patrimonyMovements.createdAt))
       .limit(10)
       .then((rows) => rows.find((r) => r.type === 'checked_out' && !r.returnDate))
-
-    if (session.role !== 'admin' && activeMovement?.performedByUserId !== session.id) {
-      throw new Error(
-        'Este item foi retirado por outro usuário. Apenas o responsável pela retirada ou um administrador pode realizar a devolução.',
-      )
-    }
 
     const now = Date.now()
     const todayStr = new Date().toISOString().slice(0, 10)
@@ -273,6 +526,8 @@ export const checkInPatrimonyItem = createServerFn({ method: 'POST' })
       })
       .where(eq(patrimonyItems.id, data.itemId))
   })
+
+// ─── Maintenance ──────────────────────────────────────────────────────────────
 
 export const sendPatrimonyToMaintenance = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) =>
@@ -367,6 +622,8 @@ export const changePatrimonyStatus = createServerFn({ method: 'POST' })
       })
       .where(eq(patrimonyItems.id, data.itemId))
   })
+
+// ─── Photo upload ─────────────────────────────────────────────────────────────
 
 export const uploadPatrimonyPhoto = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) =>

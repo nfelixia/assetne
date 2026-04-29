@@ -45,6 +45,31 @@ export const patrimonyMovements = pgTable('patrimony_movements', {
   createdAt:            bigint('created_at', { mode: 'number' }).notNull(),
 })
 
-export type PatrimonyItem     = typeof patrimonyItems.$inferSelect
-export type NewPatrimonyItem  = typeof patrimonyItems.$inferInsert
-export type PatrimonyMovement = typeof patrimonyMovements.$inferSelect
+export const patrimonyWithdrawalRequests = pgTable('patrimony_withdrawal_requests', {
+  id:                   text('id').primaryKey(),
+  itemId:               text('item_id').notNull().references(() => patrimonyItems.id, { onDelete: 'cascade' }),
+  requestedByUserId:    text('requested_by_user_id').notNull(),
+  requestedByUserName:  text('requested_by_user_name').notNull(),
+  responsibleUserId:    text('responsible_user_id'),
+  responsibleUserName:  text('responsible_user_name').notNull(),
+  useType:              text('use_type').notNull(),
+  projectOrClient:      text('project_or_client'),
+  expectedReturnDate:   text('expected_return_date'),
+  conditionOut:         text('condition_out').notNull(),
+  notes:                text('notes'),
+  status:               text('status').notNull().default('pending_approval'),
+  approvedByUserId:     text('approved_by_user_id'),
+  approvedByUserName:   text('approved_by_user_name'),
+  approvedAt:           bigint('approved_at', { mode: 'number' }),
+  rejectedByUserId:     text('rejected_by_user_id'),
+  rejectedByUserName:   text('rejected_by_user_name'),
+  rejectedAt:           bigint('rejected_at', { mode: 'number' }),
+  rejectionReason:      text('rejection_reason'),
+  createdAt:            bigint('created_at', { mode: 'number' }).notNull(),
+  updatedAt:            bigint('updated_at', { mode: 'number' }).notNull(),
+})
+
+export type PatrimonyItem                = typeof patrimonyItems.$inferSelect
+export type NewPatrimonyItem             = typeof patrimonyItems.$inferInsert
+export type PatrimonyMovement            = typeof patrimonyMovements.$inferSelect
+export type PatrimonyWithdrawalRequest   = typeof patrimonyWithdrawalRequests.$inferSelect

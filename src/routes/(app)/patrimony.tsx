@@ -3,6 +3,9 @@ import { patrimonyQueries } from '~/lib/patrimony/queries'
 
 export const Route = createFileRoute('/(app)/patrimony')({
   loader: ({ context: { queryClient } }) =>
-    queryClient.ensureQueryData(patrimonyQueries.list()),
+    Promise.all([
+      queryClient.ensureQueryData(patrimonyQueries.list()),
+      queryClient.ensureQueryData(patrimonyQueries.withdrawalRequests()),
+    ]),
   component: () => <Outlet />,
 })

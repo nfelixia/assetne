@@ -29,6 +29,7 @@ export type PatrimonyCategory = (typeof PATRIMONY_CATEGORIES)[number]
 
 export const PATRIMONY_STATUSES = [
   'disponivel',
+  'pendente_aprovacao',
   'em_uso',
   'emprestado',
   'manutencao',
@@ -54,15 +55,18 @@ export const PATRIMONY_USE_TYPES = [
 ] as const
 
 export const PATRIMONY_MOVEMENT_LABELS: Record<string, string> = {
-  created:               'Cadastro',
-  updated:               'Edição',
-  checked_out:           'Retirada',
-  returned:              'Devolução',
-  sent_to_maintenance:   'Enviado p/ manutenção',
-  maintenance_returned:  'Retornou da manutenção',
-  status_changed:        'Status alterado',
-  discarded:             'Baixa / Descarte',
-  admin_correction:      'Correção administrativa',
+  created:                'Cadastro',
+  updated:                'Edição',
+  withdrawal_requested:   'Solicitação de retirada',
+  withdrawal_rejected:    'Solicitação recusada',
+  withdrawal_cancelled:   'Solicitação cancelada',
+  checked_out:            'Retirada aprovada',
+  returned:               'Devolução',
+  sent_to_maintenance:    'Enviado p/ manutenção',
+  maintenance_returned:   'Retornou da manutenção',
+  status_changed:         'Status alterado',
+  discarded:              'Baixa / Descarte',
+  admin_correction:       'Correção administrativa',
 }
 
 export const PRODUCTION_CATEGORIES = [

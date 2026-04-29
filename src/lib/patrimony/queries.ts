@@ -12,10 +12,15 @@ import {
   returnPatrimonyFromMaintenance,
   changePatrimonyStatus,
   uploadPatrimonyPhoto,
+  createWithdrawalRequest,
+  getWithdrawalRequests,
+  approveWithdrawalRequest,
+  rejectWithdrawalRequest,
+  cancelWithdrawalRequest,
 } from '~/server/function/patrimony'
-import type { PatrimonyItem } from '~/db/schema/patrimony.schema'
+import type { PatrimonyItem, PatrimonyWithdrawalRequest } from '~/db/schema/patrimony.schema'
 
-export type { PatrimonyItem }
+export type { PatrimonyItem, PatrimonyWithdrawalRequest }
 
 export const patrimonyQueries = {
   list: () =>
@@ -28,6 +33,12 @@ export const patrimonyQueries = {
       queryKey: ['patrimony-movements', itemId],
       queryFn:  ({ signal }) => getPatrimonyItemMovements({ data: { itemId }, signal }),
       enabled:  !!itemId,
+    }),
+  withdrawalRequests: () =>
+    queryOptions({
+      queryKey: ['patrimony-withdrawal-requests'],
+      queryFn:  ({ signal }) => getWithdrawalRequests({ signal }),
+      staleTime: 1000 * 30,
     }),
 }
 
@@ -87,6 +98,59 @@ export function useCheckOutPatrimonyItemMutation() {
       toast.success('Saída registrada')
     },
     onError: (e: Error) => toast.error(e.message || 'Erro ao registrar saída'),
+  })
+}
+
+export function useCreateWithdrawalRequestMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Parameters<typeof createWithdrawalRequest>[0]['data']) =>
+      createWithdrawalRequest({ data }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['patrimony-items'] })
+      qc.invalidateQueries({ queryKey: ['patrimony-withdrawal-requests'] })
+    },
+    onError: (e: Error) => toast.error(e.message || 'Erro ao enviar solicitação'),
+  })
+}
+
+export function useApproveWithdrawalRequestMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (requestId: string) => approveWithdrawalRequest({ data: { requestId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['patrimony-items'] })
+      qc.invalidateQueries({ queryKey: ['patrimony-withdrawal-requests'] })
+      toast.success('Solicitação aprovada — item retirado')
+    },
+    onError: (e: Error) => toast.error(e.message || 'Erro ao aprovar'),
+  })
+}
+
+export function useRejectWithdrawalRequestMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { requestId: string; rejectionReason?: string }) =>
+      rejectWithdrawalRequest({ data }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['patrimony-items'] })
+      qc.invalidateQueries({ queryKey: ['patrimony-withdrawal-requests'] })
+      toast.success('Solicitação recusada')
+    },
+    onError: (e: Error) => toast.error(e.message || 'Erro ao recusar'),
+  })
+}
+
+export function useCancelWithdrawalRequestMutation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (requestId: string) => cancelWithdrawalRequest({ data: { requestId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['patrimony-items'] })
+      qc.invalidateQueries({ queryKey: ['patrimony-withdrawal-requests'] })
+      toast.success('Solicitação cancelada')
+    },
+    onError: (e: Error) => toast.error(e.message || 'Erro ao cancelar'),
   })
 }
 
