@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Modal, ModalFooter } from './Modal'
 import { useCheckOutPatrimonyItemMutation } from '~/lib/patrimony/queries'
 import type { PatrimonyItem } from '~/db/schema/patrimony.schema'
 import { PATRIMONY_USE_TYPES } from '~/utils/constants'
+import { getUsersFn } from '~/server/function/auth'
 
 const FIELD = 'rounded-lg px-3 py-2 text-[13px] w-full outline-none transition-all'
 const FIELD_STYLE = { background: '#060c1a', border: '1px solid rgba(255,255,255,0.07)', color: '#eef2ff' }
@@ -17,7 +19,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export function PatrimonyCheckOutModal({ item, onClose }: { item: PatrimonyItem; onClose: () => void }) {
-  const [responsible,      setResponsible]      = useState('')
+  const [responsibleId,    setResponsibleId]    = useState('')
+  const [customName,       setCustomName]       = useState('')
   const [useType,          setUseType]          = useState('uso_interno')
   const [projectOrClient,  setProjectOrClient]  = useState('')
   const [expectedReturn,   setExpectedReturn]   = useState('')
@@ -25,13 +28,21 @@ export function PatrimonyCheckOutModal({ item, onClose }: { item: PatrimonyItem;
   const [notes,            setNotes]            = useState('')
 
   const checkoutMut = useCheckOutPatrimonyItemMutation()
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => getUsersFn(),
+    staleTime: 1000 * 60 * 5,
+  })
 
-  const canSave = responsible.trim().length > 0
+  const isCustom = responsibleId === '__custom__'
+  const responsibleName = isCustom ? customName.trim() : (users.find((u) => u.id === responsibleId)?.name ?? '')
+  const canSave = responsibleName.length > 0
 
   async function handleConfirm() {
     await checkoutMut.mutateAsync({
       itemId:             item.id,
-      responsibleName:    responsible.trim(),
+      responsibleUserId:  isCustom ? undefined : (responsibleId || undefined),
+      responsibleName,
       useType,
       projectOrClient:    projectOrClient.trim() || undefined,
       expectedReturnDate: expectedReturn || undefined,
@@ -67,15 +78,33 @@ export function PatrimonyCheckOutModal({ item, onClose }: { item: PatrimonyItem;
 
       <div className="grid gap-3">
         <Field label="Responsável pela retirada *">
-          <input
-            className={FIELD}
+          <select
+            className={select}
             style={FIELD_STYLE}
-            value={responsible}
-            onChange={(e) => setResponsible(e.target.value)}
-            placeholder="Nome completo"
+            value={responsibleId}
+            onChange={(e) => setResponsibleId(e.target.value)}
             autoFocus
-          />
+          >
+            <option value="">Selecionar usuário...</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+            <option value="__custom__">Outro (digitar nome)...</option>
+          </select>
         </Field>
+
+        {isCustom && (
+          <Field label="Nome do responsável *">
+            <input
+              className={FIELD}
+              style={FIELD_STYLE}
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              placeholder="Nome completo"
+              autoFocus
+            />
+          </Field>
+        )}
 
         <Field label="Tipo de uso *">
           <select className={select} style={FIELD_STYLE} value={useType} onChange={(e) => setUseType(e.target.value)}>

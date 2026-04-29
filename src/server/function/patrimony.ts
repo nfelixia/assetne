@@ -159,6 +159,7 @@ export const deletePatrimonyItem = createServerFn({ method: 'POST' })
 
 const checkoutSchema = z.object({
   itemId:             z.string(),
+  responsibleUserId:  z.string().optional(),
   responsibleName:    z.string().min(1, 'Responsável obrigatório'),
   useType:            z.string().min(1),
   projectOrClient:    z.string().optional(),
@@ -185,7 +186,7 @@ export const checkOutPatrimonyItem = createServerFn({ method: 'POST' })
       type:                'checked_out',
       previousStatus:      item.status,
       newStatus,
-      responsibleUserId:   session?.id ?? null,
+      responsibleUserId:   data.responsibleUserId ?? null,
       responsibleUserName: data.responsibleName,
       performedByUserId:   session?.id ?? null,
       performedByUserName: session?.name ?? null,
@@ -201,7 +202,7 @@ export const checkOutPatrimonyItem = createServerFn({ method: 'POST' })
       .update(patrimonyItems)
       .set({
         status:                 newStatus,
-        currentResponsibleId:   session?.id ?? null,
+        currentResponsibleId:   data.responsibleUserId ?? null,
         currentResponsibleName: data.responsibleName,
         updatedAt:              now,
       })

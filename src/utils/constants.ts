@@ -46,6 +46,7 @@ export const PATRIMONY_CONDITIONS = [
 
 export const PATRIMONY_USE_TYPES = [
   { value: 'uso_interno',        label: 'Uso interno' },
+  { value: 'home_office',        label: 'Home Office' },
   { value: 'projeto',            label: 'Projeto' },
   { value: 'cliente',            label: 'Cliente' },
   { value: 'manutencao_externa', label: 'Manutenção externa' },

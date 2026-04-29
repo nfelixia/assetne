@@ -3,6 +3,7 @@ import { Modal, ModalFooter } from './Modal'
 import { useUpdatePatrimonyItemMutation, useUploadPatrimonyPhotoMutation } from '~/lib/patrimony/queries'
 import type { PatrimonyItem } from '~/db/schema/patrimony.schema'
 import { PATRIMONY_CATEGORIES } from '~/utils/constants'
+import { resizeToJpeg } from '~/utils/image'
 
 const FIELD = 'rounded-lg px-3 py-2 text-[13px] w-full outline-none transition-all'
 const FIELD_STYLE = { background: '#060c1a', border: '1px solid rgba(255,255,255,0.07)', color: '#eef2ff' }
@@ -28,10 +29,9 @@ export function EditPatrimonyModal({ item, onClose }: { item: PatrimonyItem; onC
   const [condition,       setCondition]       = useState(item.condition)
   const [estimatedValue,  setEstimatedValue]  = useState(item.estimatedValue != null ? String(item.estimatedValue) : '')
   const [acquisitionDate, setAcquisitionDate] = useState(item.acquisitionDate ?? '')
-  const [supplier,        setSupplier]        = useState(item.supplier ?? '')
   const [notes,           setNotes]           = useState(item.notes ?? '')
-  const [photoUrl,        setPhotoUrl]        = useState<string | null>(item.mainImageUrl ?? null)
-  const [photoPreview,    setPhotoPreview]    = useState<string | null>(item.mainImageUrl ?? null)
+  const [photoData,       setPhotoData]       = useState<{ base64: string; mimeType: string; fileName: string } | null>(null)
+  const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(item.mainImageUrl ?? null)
 
   const fileRef   = useRef<HTMLInputElement>(null)
   const updateMut = useUpdatePatrimonyItemMutation()
@@ -42,21 +42,17 @@ export function EditPatrimonyModal({ item, onClose }: { item: PatrimonyItem; onC
   async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = async (ev) => {
-      const base64 = ev.target!.result as string
-      setPhotoPreview(base64)
-      try {
-        const ext      = file.name.split('.').pop() ?? 'jpg'
-        const fileName = `pat_${Date.now()}.${ext}`
-        const result   = await uploadMut.mutateAsync({ base64, mimeType: file.type, fileName })
-        setPhotoUrl(result.url)
-      } catch {}
-    }
-    reader.readAsDataURL(file)
+    const data = await resizeToJpeg(file)
+    setPhotoData(data)
+    setExistingPhotoUrl(null)
   }
 
   async function handleSave() {
+    let photoUrl: string | null = existingPhotoUrl
+    if (photoData) {
+      const res = await uploadMut.mutateAsync(photoData)
+      photoUrl = res.url
+    }
     const value = estimatedValue ? parseFloat(estimatedValue.replace(',', '.')) : null
     await updateMut.mutateAsync({
       id:              item.id,
@@ -72,14 +68,15 @@ export function EditPatrimonyModal({ item, onClose }: { item: PatrimonyItem; onC
       status:          item.status,
       estimatedValue:  value,
       acquisitionDate: acquisitionDate || undefined,
-      supplier:        supplier.trim() || undefined,
       mainImageUrl:    photoUrl,
       notes:           notes.trim() || undefined,
     })
     onClose()
   }
 
-  const select = `${FIELD} appearance-none cursor-pointer`
+  const preview = photoData?.base64 ?? existingPhotoUrl
+  const select  = `${FIELD} appearance-none cursor-pointer`
+  const isLoading = updateMut.isPending || uploadMut.isPending
 
   return (
     <Modal title="Editar Item Patrimonial" onClose={onClose} width={560}>
@@ -90,8 +87,8 @@ export function EditPatrimonyModal({ item, onClose }: { item: PatrimonyItem; onC
             style={{ background: '#060c1a', border: '1px dashed rgba(255,255,255,0.12)' }}
             onClick={() => fileRef.current?.click()}
           >
-            {photoPreview ? (
-              <img src={photoPreview} className="h-full w-full object-cover" />
+            {preview ? (
+              <img src={preview} className="h-full w-full object-cover" />
             ) : (
               <span className="text-[22px]">📸</span>
             )}
@@ -102,7 +99,7 @@ export function EditPatrimonyModal({ item, onClose }: { item: PatrimonyItem; onC
               className="rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors"
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#8ba4bf' }}
             >
-              {uploadMut.isPending ? 'Enviando...' : photoPreview ? 'Trocar foto' : 'Adicionar foto'}
+              {preview ? 'Trocar foto' : 'Adicionar foto'}
             </button>
             <p className="mt-1 text-[11px]" style={{ color: '#3b5a7a' }}>Opcional · JPG, PNG</p>
           </div>
@@ -166,12 +163,6 @@ export function EditPatrimonyModal({ item, onClose }: { item: PatrimonyItem; onC
           </Field>
 
           <div className="col-span-2">
-            <Field label="Fornecedor">
-              <input className={FIELD} style={FIELD_STYLE} value={supplier} onChange={(e) => setSupplier(e.target.value)} />
-            </Field>
-          </div>
-
-          <div className="col-span-2">
             <Field label="Observações">
               <textarea className={FIELD} style={{ ...FIELD_STYLE, resize: 'none' }} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
             </Field>
@@ -183,8 +174,8 @@ export function EditPatrimonyModal({ item, onClose }: { item: PatrimonyItem; onC
         onClose={onClose}
         onConfirm={handleSave}
         confirmLabel="Salvar"
-        disabled={!canSave || updateMut.isPending || uploadMut.isPending}
-        loading={updateMut.isPending}
+        disabled={!canSave || isLoading}
+        loading={isLoading}
       />
     </Modal>
   )

@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
 import { Modal, ModalFooter } from './Modal'
 import { useCreatePatrimonyItemMutation, useUploadPatrimonyPhotoMutation } from '~/lib/patrimony/queries'
-import { PATRIMONY_CATEGORIES, PATRIMONY_CONDITIONS } from '~/utils/constants'
+import { PATRIMONY_CATEGORIES } from '~/utils/constants'
+import { resizeToJpeg } from '~/utils/image'
 
 const FIELD = 'rounded-lg px-3 py-2 text-[13px] w-full outline-none transition-all'
 const FIELD_STYLE = { background: '#060c1a', border: '1px solid rgba(255,255,255,0.07)', color: '#eef2ff' }
@@ -28,35 +29,28 @@ export function NewPatrimonyModal({ onClose }: { onClose: () => void }) {
   const [status,          setStatus]          = useState('disponivel')
   const [estimatedValue,  setEstimatedValue]  = useState('')
   const [acquisitionDate, setAcquisitionDate] = useState('')
-  const [supplier,        setSupplier]        = useState('')
   const [notes,           setNotes]           = useState('')
-  const [photoUrl,        setPhotoUrl]        = useState<string | null>(null)
-  const [photoPreview,    setPhotoPreview]    = useState<string | null>(null)
+  const [photoData,       setPhotoData]       = useState<{ base64: string; mimeType: string; fileName: string } | null>(null)
 
-  const fileRef    = useRef<HTMLInputElement>(null)
-  const createMut  = useCreatePatrimonyItemMutation()
-  const uploadMut  = useUploadPatrimonyPhotoMutation()
+  const fileRef   = useRef<HTMLInputElement>(null)
+  const createMut = useCreatePatrimonyItemMutation()
+  const uploadMut = useUploadPatrimonyPhotoMutation()
 
   const canSave = name.trim().length > 0 && category.length > 0 && patrimonyCode.trim().length > 0
 
   async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = async (ev) => {
-      const base64 = ev.target!.result as string
-      setPhotoPreview(base64)
-      try {
-        const ext      = file.name.split('.').pop() ?? 'jpg'
-        const fileName = `pat_${Date.now()}.${ext}`
-        const result   = await uploadMut.mutateAsync({ base64, mimeType: file.type, fileName })
-        setPhotoUrl(result.url)
-      } catch {}
-    }
-    reader.readAsDataURL(file)
+    const data = await resizeToJpeg(file)
+    setPhotoData(data)
   }
 
   async function handleSave() {
+    let photoUrl: string | null = null
+    if (photoData) {
+      const res = await uploadMut.mutateAsync(photoData)
+      photoUrl = res.url
+    }
     const value = estimatedValue ? parseFloat(estimatedValue.replace(',', '.')) : null
     await createMut.mutateAsync({
       name:            name.trim(),
@@ -71,7 +65,6 @@ export function NewPatrimonyModal({ onClose }: { onClose: () => void }) {
       status,
       estimatedValue:  value,
       acquisitionDate: acquisitionDate || undefined,
-      supplier:        supplier.trim() || undefined,
       mainImageUrl:    photoUrl,
       notes:           notes.trim() || undefined,
     })
@@ -79,6 +72,7 @@ export function NewPatrimonyModal({ onClose }: { onClose: () => void }) {
   }
 
   const select = `${FIELD} appearance-none cursor-pointer`
+  const isLoading = createMut.isPending || uploadMut.isPending
 
   return (
     <Modal title="Cadastrar Item Patrimonial" onClose={onClose} width={560}>
@@ -90,8 +84,8 @@ export function NewPatrimonyModal({ onClose }: { onClose: () => void }) {
             style={{ background: '#060c1a', border: '1px dashed rgba(255,255,255,0.12)' }}
             onClick={() => fileRef.current?.click()}
           >
-            {photoPreview ? (
-              <img src={photoPreview} className="h-full w-full object-cover" />
+            {photoData ? (
+              <img src={photoData.base64} className="h-full w-full object-cover" />
             ) : (
               <span className="text-[22px]">📸</span>
             )}
@@ -102,7 +96,7 @@ export function NewPatrimonyModal({ onClose }: { onClose: () => void }) {
               className="rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors"
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#8ba4bf' }}
             >
-              {uploadMut.isPending ? 'Enviando...' : photoPreview ? 'Trocar foto' : 'Adicionar foto'}
+              {photoData ? 'Trocar foto' : 'Adicionar foto'}
             </button>
             <p className="mt-1 text-[11px]" style={{ color: '#3b5a7a' }}>Opcional · JPG, PNG</p>
           </div>
@@ -177,12 +171,6 @@ export function NewPatrimonyModal({ onClose }: { onClose: () => void }) {
           </Field>
 
           <div className="col-span-2">
-            <Field label="Fornecedor">
-              <input className={FIELD} style={FIELD_STYLE} value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Nome do fornecedor" />
-            </Field>
-          </div>
-
-          <div className="col-span-2">
             <Field label="Observações">
               <textarea className={FIELD} style={{ ...FIELD_STYLE, resize: 'none' }} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Informações adicionais..." />
             </Field>
@@ -194,8 +182,8 @@ export function NewPatrimonyModal({ onClose }: { onClose: () => void }) {
         onClose={onClose}
         onConfirm={handleSave}
         confirmLabel="Cadastrar"
-        disabled={!canSave || createMut.isPending || uploadMut.isPending}
-        loading={createMut.isPending}
+        disabled={!canSave || isLoading}
+        loading={isLoading}
       />
     </Modal>
   )
