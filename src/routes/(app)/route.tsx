@@ -28,21 +28,25 @@ const NAV_ADMIN = [
 ]
 
 const ROLE_LABEL: Record<string, string> = {
-  admin:    'Administrador',
-  produtor: 'Produtor',
-  operator: 'Operador',
+  admin:               'Administrador',
+  produtor:            'Produtor',
+  operator:            'Operador',
+  gestor_patrimonio:   'Gest. Patrimônio',
 }
 
 function AppLayout() {
   const { session } = Route.useRouteContext() as { session: SessionUser }
   const router = useRouter()
-  const isAdmin    = session.role === 'admin'
-  const isProdutor = session.role === 'produtor'
+  const isAdmin             = session.role === 'admin'
+  const isProdutor          = session.role === 'produtor'
+  const isGestorPatrimonio  = session.role === 'gestor_patrimonio'
   const nav = isAdmin
     ? [...NAV_BASE, ...NAV_PRODUCTION, ...NAV_PATRIMONY, ...NAV_ADMIN]
     : isProdutor
       ? [...NAV_BASE, ...NAV_PRODUCTION, ...NAV_PATRIMONY]
-      : [...NAV_BASE, ...NAV_PATRIMONY]
+      : isGestorPatrimonio
+        ? [...NAV_PATRIMONY]
+        : [...NAV_BASE, ...NAV_PATRIMONY]
 
   async function handleLogout() {
     await logoutFn()

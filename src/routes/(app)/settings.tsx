@@ -90,13 +90,13 @@ function UsersPanel({ currentUserId }: { currentUserId: string }) {
   const [username,    setUsername]    = useState('')
   const [name,        setName]        = useState('')
   const [password,    setPassword]    = useState('')
-  const [role,        setRole]        = useState<'admin' | 'operator' | 'produtor'>('operator')
+  const [role,        setRole]        = useState<'admin' | 'operator' | 'produtor' | 'gestor_patrimonio'>('operator')
   const [resetingId,  setResetingId]  = useState<string | null>(null)
   const [newPass,     setNewPass]     = useState('')
   const [copiedToken, setCopiedToken] = useState<string | null>(null)
 
   const createMutation = useMutation({
-    mutationFn: () => createUserFn({ data: { username, name, password, role } }),
+    mutationFn: () => createUserFn({ data: { username, name, password, role: role as any } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] })
       setUsername(''); setName(''); setPassword('')
@@ -114,8 +114,8 @@ function UsersPanel({ currentUserId }: { currentUserId: string }) {
   })
 
   const changeRoleMutation = useMutation({
-    mutationFn: ({ id, role }: { id: string; role: 'admin' | 'operator' | 'produtor' }) =>
-      changeRoleFn({ data: { id, role } }),
+    mutationFn: ({ id, role }: { id: string; role: 'admin' | 'operator' | 'produtor' | 'gestor_patrimonio' }) =>
+      changeRoleFn({ data: { id, role: role as any } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] })
       toast.success('Função alterada')
@@ -152,7 +152,7 @@ function UsersPanel({ currentUserId }: { currentUserId: string }) {
         <div className="flex gap-2">
           <select
             value={role}
-            onChange={(e) => setRole(e.target.value as 'admin' | 'operator' | 'produtor')}
+            onChange={(e) => setRole(e.target.value as any)}
             className="flex-1 rounded-lg px-3 py-2 text-[13px] outline-none transition-all"
             style={{
               background: '#060c1a',
@@ -162,6 +162,7 @@ function UsersPanel({ currentUserId }: { currentUserId: string }) {
           >
             <option value="operator">Operador</option>
             <option value="produtor">Produtor</option>
+            <option value="gestor_patrimonio">Gest. Patrimônio</option>
             <option value="admin">Administrador</option>
           </select>
           <PrimaryBtn
@@ -200,7 +201,7 @@ function UsersPanel({ currentUserId }: { currentUserId: string }) {
                   value={u.role ?? 'operator'}
                   disabled={u.id === currentUserId || changeRoleMutation.isPending}
                   onChange={(e) =>
-                    changeRoleMutation.mutate({ id: u.id, role: e.target.value as 'admin' | 'operator' | 'produtor' })
+                    changeRoleMutation.mutate({ id: u.id, role: e.target.value as any })
                   }
                   className="rounded-lg px-2 py-1.5 text-[12px] outline-none transition-all"
                   style={{
@@ -213,6 +214,7 @@ function UsersPanel({ currentUserId }: { currentUserId: string }) {
                 >
                   <option value="operator">Operador</option>
                   <option value="produtor">Produtor</option>
+                  <option value="gestor_patrimonio">Gest. Patrimônio</option>
                   <option value="admin">Administrador</option>
                 </select>
                 <GhostBtn

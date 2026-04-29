@@ -39,7 +39,7 @@ export const loginFn = createServerFn({ method: 'POST' })
       id: user.id,
       username: user.username,
       name: user.name,
-      role: user.role as 'admin' | 'operator' | 'produtor',
+      role: user.role as 'admin' | 'operator' | 'produtor' | 'gestor_patrimonio',
     }
 
     const token = await createSessionToken(sessionUser)
@@ -63,7 +63,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
       username: z.string().min(3),
       name: z.string().min(2),
       password: z.string().min(6),
-      role: z.enum(['admin', 'operator', 'produtor']),
+      role: z.enum(['admin', 'operator', 'produtor', 'gestor_patrimonio']),
     }).parse(d),
   )
   .handler(async ({ data }) => {
@@ -104,7 +104,7 @@ export const getUsersFn = createServerFn({ method: 'GET' }).handler(async () => 
 
 export const changeRoleFn = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) =>
-    z.object({ id: z.string(), role: z.enum(['admin', 'operator', 'produtor']) }).parse(d),
+    z.object({ id: z.string(), role: z.enum(['admin', 'operator', 'produtor', 'gestor_patrimonio']) }).parse(d),
   )
   .handler(async ({ data }) => {
     await db.update(users).set({ role: data.role }).where(eq(users.id, data.id))

@@ -7,7 +7,7 @@ export type SessionUser = {
   id: string
   username: string
   name: string
-  role: 'admin' | 'operator' | 'produtor'
+  role: 'admin' | 'operator' | 'produtor' | 'gestor_patrimonio'
 }
 
 function b64(input: string): string {
