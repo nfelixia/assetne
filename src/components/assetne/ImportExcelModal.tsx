@@ -10,6 +10,13 @@ const MAX_IMPORT_ROWS = 200
 
 type ImportType = 'equipment' | 'clients' | 'production' | 'patrimony'
 
+const TYPE_LABEL: Record<ImportType, string> = {
+  equipment:  'equipamentos',
+  production: 'itens de produção',
+  patrimony:  'itens de patrimônio',
+  clients:    'clientes',
+}
+
 type EquipRow = {
   nome: string
   categoria: string
@@ -56,6 +63,15 @@ function normalizeProdCondition(raw: string): 'bom' | 'regular' | 'ruim' {
   return 'bom'
 }
 
+function normalizePatrimonyCondition(raw: string): string {
+  const v = raw?.toLowerCase().trim()
+  if (v === 'novo' || v === 'new')                       return 'novo'
+  if (v === 'regular')                                    return 'regular'
+  if (v === 'necessita_manutencao' || v === 'manutenção' || v === 'manutencao') return 'necessita_manutencao'
+  if (v === 'danificado' || v === 'danificada' || v === 'damaged') return 'danificado'
+  return 'bom'
+}
+
 export function ImportExcelModal({
   type,
   onClose,
@@ -63,10 +79,10 @@ export function ImportExcelModal({
   type: ImportType
   onClose: () => void
 }) {
-  const [rows,      setRows]      = useState<ParsedRow[]>([])
-  const [error,     setError]     = useState<string | null>(null)
-  const [importing, setImporting] = useState(false)
-  const [done,      setDone]      = useState(false)
+  const [rows,        setRows]        = useState<ParsedRow[]>([])
+  const [error,       setError]       = useState<string | null>(null)
+  const [importing,   setImporting]   = useState(false)
+  const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const createEquip    = useCreateEquipmentMutation()
@@ -114,11 +130,12 @@ export function ImportExcelModal({
           setRows(parsed)
         } else if (type === 'patrimony') {
           let autoCode = 1
+          const autoPrefix = `IMP${Date.now().toString().slice(-6)}`
           const parsed: PatRow[] = json
             .map((r) => ({
               nome:              String(r['Nome'] || r['nome'] || r['NOME'] || '').trim(),
               categoria:         String(r['Categoria'] || r['categoria'] || 'Outro').trim(),
-              codigoPatrimonial: String(r['Código'] || r['Codigo'] || r['codigo'] || r['código'] || r['CodigoPatrimonial'] || r['codigoPatrimonial'] || '').trim() || `IMP-${String(autoCode++).padStart(3, '0')}`,
+              codigoPatrimonial: String(r['Código'] || r['Codigo'] || r['codigo'] || r['código'] || r['CodigoPatrimonial'] || r['codigoPatrimonial'] || '').trim() || `${autoPrefix}-${String(autoCode++).padStart(3, '0')}`,
               marca:             String(r['Marca'] || r['marca'] || '').trim() || undefined,
               modelo:            String(r['Modelo'] || r['modelo'] || '').trim() || undefined,
               localizacao:       String(r['Localização'] || r['Localizacao'] || r['localizacao'] || '').trim() || undefined,
@@ -147,52 +164,66 @@ export function ImportExcelModal({
 
   async function handleImport() {
     setImporting(true)
+    let success = 0
+    let failed = 0
     try {
       if (type === 'equipment') {
         for (const row of rows as EquipRow[]) {
-          await createEquip.mutateAsync({
-            name:         row.nome,
-            category:     row.categoria,
-            value:        row.valor,
-            serialNumber: row.serie,
-            condition:    normalizeCondition(row.condicao ?? ''),
-          })
+          try {
+            await createEquip.mutateAsync({
+              name:         row.nome,
+              category:     row.categoria,
+              value:        row.valor,
+              serialNumber: row.serie,
+              condition:    normalizeCondition(row.condicao ?? ''),
+            })
+            success++
+          } catch { failed++ }
         }
       } else if (type === 'production') {
         for (const row of rows as ProdRow[]) {
-          await createProd.mutateAsync({
-            name:          row.nome,
-            category:      row.categoria,
-            totalQty:      row.quantidade,
-            condition:     normalizeProdCondition(row.condicao ?? ''),
-            location:      row.localizacao,
-            codigoInterno: row.codigo,
-            notes:         row.notas,
-          })
+          try {
+            await createProd.mutateAsync({
+              name:          row.nome,
+              category:      row.categoria,
+              totalQty:      row.quantidade,
+              condition:     normalizeProdCondition(row.condicao ?? ''),
+              location:      row.localizacao,
+              codigoInterno: row.codigo,
+              notes:         row.notas,
+            })
+            success++
+          } catch { failed++ }
         }
       } else if (type === 'patrimony') {
         for (const row of rows as PatRow[]) {
-          const val = row.valor ? parseFloat(row.valor.replace(/[R$\s.]/g, '').replace(',', '.')) : null
-          await createPatrimony.mutateAsync({
-            name:           row.nome,
-            category:       row.categoria,
-            patrimonyCode:  row.codigoPatrimonial,
-            brand:          row.marca,
-            model:          row.modelo,
-            location:       row.localizacao,
-            condition:      row.condicao ?? 'bom',
-            status:         'disponivel',
-            quantity:       1,
-            estimatedValue: val && !isNaN(val) ? val : null,
-            notes:          row.notas,
-          })
+          try {
+            const val = row.valor ? parseFloat(row.valor.replace(/[R$\s.]/g, '').replace(',', '.')) : null
+            await createPatrimony.mutateAsync({
+              name:           row.nome,
+              category:       row.categoria,
+              patrimonyCode:  row.codigoPatrimonial,
+              brand:          row.marca,
+              model:          row.modelo,
+              location:       row.localizacao,
+              condition:      normalizePatrimonyCondition(row.condicao ?? ''),
+              status:         'disponivel',
+              quantity:       1,
+              estimatedValue: val && !isNaN(val) ? val : null,
+              notes:          row.notas,
+            })
+            success++
+          } catch { failed++ }
         }
       } else {
         for (const row of rows as ClientRow[]) {
-          await createClient.mutateAsync(row.nome)
+          try {
+            await createClient.mutateAsync(row.nome)
+            success++
+          } catch { failed++ }
         }
       }
-      setDone(true)
+      setImportResult({ success, failed })
     } finally {
       setImporting(false)
     }
@@ -206,12 +237,24 @@ export function ImportExcelModal({
 
   return (
     <Modal title={title} onClose={onClose} width={520}>
-      {done ? (
+      {importResult ? (
         <div className="py-6 text-center">
-          <div className="mb-2 text-[32px]">✓</div>
-          <div className="text-[15px] font-semibold text-[#3fb950]">
-            {rows.length} {type === 'equipment' ? 'equipamento(s) importado(s)' : 'cliente(s) importado(s)'}
-          </div>
+          <div className="mb-2 text-[32px]">{importResult.failed === 0 ? '✓' : importResult.success === 0 ? '✗' : '⚠'}</div>
+          {importResult.failed === 0 ? (
+            <div className="text-[15px] font-semibold text-[#3fb950]">
+              {importResult.success} {TYPE_LABEL[type]} importado(s) com sucesso.
+            </div>
+          ) : importResult.success === 0 ? (
+            <div className="text-[15px] font-semibold text-[#f85149]">
+              Falha ao importar. Verifique o arquivo e tente novamente.
+            </div>
+          ) : (
+            <div className="text-[14px]">
+              <span className="font-semibold text-[#3fb950]">{importResult.success} importado(s)</span>
+              <span className="text-[#8b949e]"> · </span>
+              <span className="font-semibold text-[#f85149]">{importResult.failed} falhou</span>
+            </div>
+          )}
           <button
             onClick={onClose}
             className="mt-4 rounded-md bg-[#1f6feb] px-5 py-2 text-[13px] font-medium text-white"
@@ -294,17 +337,23 @@ export function ImportExcelModal({
                   className={`flex items-center gap-3 px-3 py-2 text-[12px] ${i < rows.length - 1 ? 'border-b border-white/[0.06]' : ''}`}
                 >
                   <span className="shrink-0 font-['JetBrains_Mono'] text-[#6e7681]">{i + 1}</span>
-                  {'valor' in row ? (
+                  {'codigoPatrimonial' in row ? (
                     <>
-                      <span className="font-medium text-[#e6edf3]">{(row as EquipRow).nome}</span>
-                      <span className="text-[#6e7681]">{(row as EquipRow).categoria}</span>
-                      <span className="ml-auto font-['JetBrains_Mono'] text-[#8b949e]">{(row as EquipRow).valor}</span>
+                      <span className="font-medium text-[#e6edf3]">{(row as PatRow).nome}</span>
+                      <span className="text-[#6e7681]">{(row as PatRow).categoria}</span>
+                      <span className="ml-auto font-['JetBrains_Mono'] text-[#8b949e]">{(row as PatRow).codigoPatrimonial}</span>
                     </>
                   ) : 'quantidade' in row ? (
                     <>
                       <span className="font-medium text-[#e6edf3]">{(row as ProdRow).nome}</span>
                       <span className="text-[#6e7681]">{(row as ProdRow).categoria}</span>
                       <span className="ml-auto font-['JetBrains_Mono'] text-[#8b949e]">{(row as ProdRow).quantidade}x</span>
+                    </>
+                  ) : 'valor' in row ? (
+                    <>
+                      <span className="font-medium text-[#e6edf3]">{(row as EquipRow).nome}</span>
+                      <span className="text-[#6e7681]">{(row as EquipRow).categoria}</span>
+                      <span className="ml-auto font-['JetBrains_Mono'] text-[#8b949e]">{(row as EquipRow).valor}</span>
                     </>
                   ) : (
                     <span className="font-medium text-[#e6edf3]">{(row as ClientRow).nome}</span>
@@ -325,7 +374,7 @@ export function ImportExcelModal({
           <ModalFooter
             onClose={onClose}
             onConfirm={handleImport}
-            confirmLabel={`Importar ${rows.length > 0 ? rows.length + ' ' + (type === 'equipment' ? 'equipamentos' : 'clientes') : ''}`}
+            confirmLabel={`Importar ${rows.length > 0 ? rows.length + ' ' + TYPE_LABEL[type] : ''}`}
             disabled={rows.length === 0}
             loading={importing}
           />
