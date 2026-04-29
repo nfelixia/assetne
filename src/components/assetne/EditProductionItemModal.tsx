@@ -19,6 +19,7 @@ export function EditProductionItemModal({
 }) {
   const [name,          setName]          = useState(item.name)
   const [category,      setCategory]      = useState(item.category)
+  const [color,         setColor]         = useState(item.color ?? '')
   const [totalQty,      setTotalQty]      = useState(item.totalQty)
   const [condition,     setCondition]     = useState<'bom' | 'regular' | 'ruim'>(item.condition as 'bom' | 'regular' | 'ruim')
   const [location,      setLocation]      = useState(item.location ?? '')
@@ -54,6 +55,7 @@ export function EditProductionItemModal({
       location: location.trim() || undefined,
       codigoInterno: codigoInterno.trim() || undefined,
       notes: notes.trim() || undefined,
+      color: color.trim() || undefined,
       photoUrl,
     })
     onClose()
@@ -111,6 +113,18 @@ export function EditProductionItemModal({
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
+      </Field>
+
+      <Field label="Cor (opcional)">
+        <input
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+          placeholder="Ex: Amarela, Preta, Multicolorida..."
+          className="w-full rounded-md px-3 py-2 text-[13px] outline-none transition-colors"
+          style={{ background: '#161b22', border: '1px solid rgba(255,255,255,0.1)', color: '#e6edf3' }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = '#58a6ff')}
+          onBlur={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
+        />
       </Field>
 
       <div className="mb-3 grid grid-cols-2 gap-3">

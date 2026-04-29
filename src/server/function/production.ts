@@ -23,6 +23,7 @@ const itemBaseSchema = z.object({
   photoUrl:      z.string().nullable().optional(),
   notes:         z.string().optional(),
   codigoInterno: z.string().optional(),
+  color:         z.string().optional(),
 })
 
 export const getProductionItems = createServerFn({ method: 'GET' }).handler(async () => {
@@ -76,6 +77,7 @@ export const createProductionItem = createServerFn({ method: 'POST' })
       photoUrl:      data.photoUrl ?? null,
       notes:         data.notes ?? null,
       codigoInterno: data.codigoInterno ?? null,
+      color:         data.color ?? null,
       createdAt:     now,
       updatedAt:     now,
     }
@@ -97,6 +99,7 @@ export const updateProductionItem = createServerFn({ method: 'POST' })
         photoUrl:      data.photoUrl ?? null,
         notes:         data.notes ?? null,
         codigoInterno: data.codigoInterno ?? null,
+        color:         data.color ?? null,
         updatedAt:     Date.now(),
       })
       .where(eq(productionItems.id, data.id))

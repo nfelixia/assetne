@@ -47,7 +47,8 @@ function ProductionPage() {
     const matchSearch = !q || (
       normalizeText(item.name).includes(q) ||
       normalizeText(item.category).includes(q) ||
-      (item.codigoInterno ? normalizeText(item.codigoInterno).includes(q) : false)
+      (item.codigoInterno ? normalizeText(item.codigoInterno).includes(q) : false) ||
+      (item.color ? normalizeText(item.color).includes(q) : false)
     )
     const matchFilter = filter === 'all' || item.status === filter
     return matchSearch && matchFilter
@@ -247,10 +248,18 @@ function ProductionRow({
           <div className="truncate text-[13px] font-medium" style={{ color: '#d6e4f0' }}>
             {item.name}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px]" style={{ color: '#3b5a7a' }}>
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]" style={{ color: '#3b5a7a' }}>
             {item.codigoInterno && (
               <span style={{ color: '#58a6ff', fontFamily: "'JetBrains Mono', monospace" }}>
                 #{item.codigoInterno}
+              </span>
+            )}
+            {item.color && (
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                style={{ background: 'rgba(139,164,191,0.1)', border: '1px solid rgba(139,164,191,0.15)', color: '#8ba4bf' }}
+              >
+                {item.color.charAt(0).toUpperCase() + item.color.slice(1).toLowerCase()}
               </span>
             )}
             {item.location && <span>{item.location}</span>}

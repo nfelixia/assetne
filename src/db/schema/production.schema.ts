@@ -12,6 +12,7 @@ export const productionItems = pgTable('production_items', {
   photoUrl:       text('photo_url'),
   notes:          text('notes'),
   codigoInterno:  text('codigo_interno'),
+  color:          text('color'),
   createdAt:      bigint('created_at', { mode: 'number' }).notNull(),
   updatedAt:      bigint('updated_at', { mode: 'number' }).notNull(),
 })

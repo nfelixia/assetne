@@ -28,8 +28,9 @@ const TEMPLATES: Record<ImportType, { filename: string; rows: Record<string, str
   production: {
     filename: 'modelo_producao.xlsx',
     rows: [
-      { Nome: 'Cabo HDMI 10m', Categoria: 'Cabos',    Quantidade: 5, Condição: 'bom',  Localização: 'Prateleira A', Código: 'CAB-001', Notas: '' },
-      { Nome: 'Gaffer Tape',   Categoria: 'Materiais', Quantidade: 20, Condição: 'novo', Localização: '',             Código: '',        Notas: '' },
+      { Nome: 'Bola de Cena', Categoria: 'Adereço',   Quantidade: 3, Cor: 'Amarela',      Condição: 'bom',     Localização: 'Caixa 1', Código: 'ADR-001', Notas: '' },
+      { Nome: 'Vestido Longo', Categoria: 'Figurino', Quantidade: 1, Cor: 'Preta',        Condição: 'bom',     Localização: 'Arara A', Código: 'FIG-001', Notas: 'Tamanho M' },
+      { Nome: 'Gaffer Tape',  Categoria: 'Consumível', Quantidade: 20, Cor: '',           Condição: 'novo',    Localização: '',        Código: '',        Notas: '' },
     ],
   },
   patrimony: {
@@ -73,6 +74,7 @@ type ProdRow = {
   localizacao?: string
   codigo?: string
   notas?: string
+  cor?: string
 }
 
 type PatRow = {
@@ -164,6 +166,7 @@ export function ImportExcelModal({
               localizacao: String(r['Localização'] || r['Localizacao'] || r['localizacao'] || '').trim() || undefined,
               codigo:      String(r['Código'] || r['Codigo'] || r['codigo'] || r['código'] || '').trim() || undefined,
               notas:       String(r['Notas'] || r['notas'] || r['Observações'] || r['observacoes'] || '').trim() || undefined,
+              cor:         String(r['Cor'] || r['cor'] || r['COR'] || r['Color'] || r['color'] || '').trim() || undefined,
             }))
             .filter((r) => r.nome.length > 0)
             .slice(0, MAX_IMPORT_ROWS)
@@ -231,6 +234,7 @@ export function ImportExcelModal({
               location:      row.localizacao,
               codigoInterno: row.codigo,
               notes:         row.notas,
+              color:         row.cor,
             })
             success++
           } catch { failed++ }
@@ -328,6 +332,7 @@ export function ImportExcelModal({
                 Colunas esperadas:{' '}
                 <span className="font-['JetBrains_Mono'] text-[#58a6ff]">Nome</span>,{' '}
                 <span className="font-['JetBrains_Mono'] text-[#58a6ff]">Categoria</span>,{' '}
+                <span className="font-['JetBrains_Mono'] text-[#6e7681]">Cor (opc.)</span>,{' '}
                 <span className="font-['JetBrains_Mono'] text-[#6e7681]">Quantidade (opc.)</span>,{' '}
                 <span className="font-['JetBrains_Mono'] text-[#6e7681]">Condição (opc.)</span>,{' '}
                 <span className="font-['JetBrains_Mono'] text-[#6e7681]">Localização (opc.)</span>,{' '}

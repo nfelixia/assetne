@@ -44,6 +44,7 @@ export function useCreateProductionItemMutation() {
       photoUrl?: string | null
       notes?: string
       codigoInterno?: string
+      color?: string
     }) => createProductionItem({ data }),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['production-items'] })
@@ -66,6 +67,7 @@ export function useUpdateProductionItemMutation() {
       photoUrl?: string | null
       notes?: string
       codigoInterno?: string
+      color?: string
     }) => updateProductionItem({ data }),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['production-items'] })
