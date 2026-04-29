@@ -10,7 +10,9 @@
       "Bash(pnpm tsc *)",
       "Bash(pnpm add *)",
       "Bash(node scripts/gen-icons.mjs)",
-      "Bash(pnpm remove *)"
+      "Bash(pnpm remove *)",
+      "Bash(pnpm drizzle-kit *)",
+      "Bash(npx vercel *)"
     ]
   }
 }

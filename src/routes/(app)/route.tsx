@@ -19,6 +19,9 @@ const NAV_BASE = [
 const NAV_PRODUCTION = [
   { to: '/production', label: 'Acervo',       icon: ArchiveIcon },
 ]
+const NAV_PATRIMONY = [
+  { to: '/patrimony',  label: 'Patrimônio',   icon: BuildingIcon },
+]
 const NAV_ADMIN = [
   { to: '/reports',    label: 'Relatórios',   icon: ChartIcon },
   { to: '/settings',   label: 'Configurações',icon: GearIcon },
@@ -36,10 +39,10 @@ function AppLayout() {
   const isAdmin    = session.role === 'admin'
   const isProdutor = session.role === 'produtor'
   const nav = isAdmin
-    ? [...NAV_BASE, ...NAV_PRODUCTION, ...NAV_ADMIN]
+    ? [...NAV_BASE, ...NAV_PRODUCTION, ...NAV_PATRIMONY, ...NAV_ADMIN]
     : isProdutor
-      ? [...NAV_BASE, ...NAV_PRODUCTION]
-      : NAV_BASE
+      ? [...NAV_BASE, ...NAV_PRODUCTION, ...NAV_PATRIMONY]
+      : [...NAV_BASE, ...NAV_PATRIMONY]
 
   async function handleLogout() {
     await logoutFn()
@@ -257,6 +260,14 @@ function ArchiveIcon({ size = 20 }: { size?: number }) {
       <polyline points="21 8 21 21 3 21 3 8"/>
       <rect x="1" y="3" width="22" height="5"/>
       <line x1="10" y1="12" x2="14" y2="12"/>
+    </svg>
+  )
+}
+function BuildingIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <path d="M9 3v18M15 3v18M3 9h6M3 15h6M15 9h6M15 15h6"/>
     </svg>
   )
 }
