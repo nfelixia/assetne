@@ -17,6 +17,46 @@ const TYPE_LABEL: Record<ImportType, string> = {
   clients:    'clientes',
 }
 
+const TEMPLATES: Record<ImportType, { filename: string; rows: Record<string, string | number>[] }> = {
+  equipment: {
+    filename: 'modelo_equipamentos.xlsx',
+    rows: [
+      { Nome: 'Câmera Sony A7 III', Categoria: 'Câmeras', Valor: 'R$ 12.000', Série: 'SN123456', Condição: 'bom' },
+      { Nome: 'Tripé Profissional',  Categoria: 'Suportes',  Valor: 'R$ 800',    Série: '',          Condição: 'novo' },
+    ],
+  },
+  production: {
+    filename: 'modelo_producao.xlsx',
+    rows: [
+      { Nome: 'Cabo HDMI 10m', Categoria: 'Cabos',    Quantidade: 5, Condição: 'bom',  Localização: 'Prateleira A', Código: 'CAB-001', Notas: '' },
+      { Nome: 'Gaffer Tape',   Categoria: 'Materiais', Quantidade: 20, Condição: 'novo', Localização: '',             Código: '',        Notas: '' },
+    ],
+  },
+  patrimony: {
+    filename: 'modelo_patrimonio.xlsx',
+    rows: [
+      { Nome: 'Notebook Dell XPS', Categoria: 'Informática', Código: 'PAT-001', Marca: 'Dell',   Modelo: 'XPS 15', Valor: 'R$ 8.000', Condição: 'bom',  Localização: 'Escritório', Notas: '' },
+      { Nome: 'Monitor LG 27"',    Categoria: 'Informática', Código: 'PAT-002', Marca: 'LG',     Modelo: '27UK850', Valor: 'R$ 3.500', Condição: 'novo', Localização: 'Escritório', Notas: '' },
+      { Nome: 'Cadeira Ergonômica', Categoria: 'Mobiliário',  Código: '',        Marca: 'Flexform', Modelo: '',       Valor: 'R$ 1.200', Condição: 'bom',  Localização: 'Sala 2',    Notas: 'Gerado automaticamente se Código vazio' },
+    ],
+  },
+  clients: {
+    filename: 'modelo_clientes.xlsx',
+    rows: [
+      { Nome: 'Empresa ABC Ltda' },
+      { Nome: 'João da Silva'    },
+    ],
+  },
+}
+
+function downloadTemplate(type: ImportType) {
+  const tpl = TEMPLATES[type]
+  const ws  = XLSX.utils.json_to_sheet(tpl.rows)
+  const wb  = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Modelo')
+  XLSX.writeFile(wb, tpl.filename)
+}
+
 type EquipRow = {
   nome: string
   categoria: string
@@ -266,6 +306,14 @@ export function ImportExcelModal({
         <>
           {/* Template hint */}
           <div className="mb-4 rounded-md border border-white/10 bg-[#0d1117] p-3 text-[12px] text-[#8b949e]">
+            <button
+              type="button"
+              onClick={() => downloadTemplate(type)}
+              className="mb-2 flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium transition-colors hover:bg-white/5"
+              style={{ color: '#58a6ff', border: '1px solid rgba(88,166,255,0.2)' }}
+            >
+              ⬇ Baixar planilha modelo
+            </button>
             {type === 'equipment' ? (
               <>
                 Colunas esperadas:{' '}
