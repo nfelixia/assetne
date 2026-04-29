@@ -172,7 +172,7 @@ function ProductionPage() {
 
       {showNew      && <NewProductionItemModal onClose={() => setShowNew(false)} />}
       {showImport   && <ImportExcelModal type="production" onClose={() => setShowImport(false)} />}
-      {editItem     && <EditProductionItemModal item={editItem} onClose={() => setEditItem(null)} />
+      {editItem     && <EditProductionItemModal item={editItem} onClose={() => setEditItem(null)} />}
       {checkoutItem && <ProductionCheckOutModal item={checkoutItem} onClose={() => setCheckoutItem(null)} />}
       {checkinItem  && <ProductionCheckInModal item={checkinItem} onClose={() => setCheckinItem(null)} />}
       {lightbox     && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
