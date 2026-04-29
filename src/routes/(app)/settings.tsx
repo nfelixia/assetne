@@ -5,7 +5,8 @@ import { toast } from 'sonner'
 import { clientsQueries, useCreateClientMutation, useDeleteClientMutation } from '~/lib/clients/queries'
 import { ImportExcelModal } from '~/components/assetne/ImportExcelModal'
 import { collaboratorsQueries, useCreateCollaboratorMutation, useDeleteCollaboratorMutation } from '~/lib/collaborators/queries'
-import { createUserFn, deleteUserFn, getUsersFn, changePasswordFn } from '~/server/function/auth'
+import { createUserFn, deleteUserFn, getUsersFn, changePasswordFn, changeRoleFn } from '~/server/function/auth'
+import type { SessionUser } from '~/lib/auth/session'
 import type { Client } from '~/db/schema/client.schema'
 import type { Collaborator } from '~/db/schema/collaborator.schema'
 
@@ -25,6 +26,7 @@ export const Route = createFileRoute('/(app)/settings')({
 type Tab = 'collaborators' | 'clients' | 'users'
 
 function SettingsPage() {
+  const { session } = Route.useRouteContext() as { session: SessionUser }
   const [tab, setTab] = useState<Tab>('collaborators')
 
   const tabs: { id: Tab; label: string }[] = [
@@ -72,13 +74,13 @@ function SettingsPage() {
 
       {tab === 'collaborators' && <CollaboratorsPanel />}
       {tab === 'clients'       && <ClientsPanel />}
-      {tab === 'users'         && <UsersPanel />}
+      {tab === 'users'         && <UsersPanel currentUserId={session.id} />}
     </div>
   )
 }
 
 /* ─── USERS ── */
-function UsersPanel() {
+function UsersPanel({ currentUserId }: { currentUserId: string }) {
   const qc = useQueryClient()
   const { data: users = [] } = useSuspenseQuery({
     queryKey: ['users'],
@@ -109,6 +111,16 @@ function UsersPanel() {
       qc.invalidateQueries({ queryKey: ['users'] })
       toast.success('Usuário removido')
     },
+  })
+
+  const changeRoleMutation = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: 'admin' | 'operator' | 'produtor' }) =>
+      changeRoleFn({ data: { id, role } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      toast.success('Função alterada')
+    },
+    onError: (e: any) => toast.error(e.message || 'Erro ao alterar função'),
   })
 
   const changePassMutation = useMutation({
@@ -181,11 +193,28 @@ function UsersPanel() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[13px] font-medium" style={{ color: '#eef2ff' }}>{u.name}</div>
-                <div className="text-[11px]" style={{ color: '#4a6380' }}>
-                  @{u.username} · {{ admin: 'Administrador', produtor: 'Produtor', operator: 'Operador' }[u.role as string] ?? 'Operador'}
-                </div>
+                <div className="text-[11px]" style={{ color: '#4a6380' }}>@{u.username}</div>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
+                <select
+                  value={u.role ?? 'operator'}
+                  disabled={u.id === currentUserId || changeRoleMutation.isPending}
+                  onChange={(e) =>
+                    changeRoleMutation.mutate({ id: u.id, role: e.target.value as 'admin' | 'operator' | 'produtor' })
+                  }
+                  className="rounded-lg px-2 py-1.5 text-[12px] outline-none transition-all"
+                  style={{
+                    background: '#060c1a',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    color: u.id === currentUserId ? '#4a6380' : '#8ba4bf',
+                    cursor: u.id === currentUserId ? 'not-allowed' : 'pointer',
+                  }}
+                  title={u.id === currentUserId ? 'Não é possível alterar sua própria função' : undefined}
+                >
+                  <option value="operator">Operador</option>
+                  <option value="produtor">Produtor</option>
+                  <option value="admin">Administrador</option>
+                </select>
                 <GhostBtn
                   onClick={() => { setResetingId(resetingId === u.id ? null : u.id); setNewPass('') }}
                 >

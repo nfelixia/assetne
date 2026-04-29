@@ -102,6 +102,15 @@ export const getUsersFn = createServerFn({ method: 'GET' }).handler(async () => 
   })
 })
 
+export const changeRoleFn = createServerFn({ method: 'POST' })
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string(), role: z.enum(['admin', 'operator', 'produtor']) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    await db.update(users).set({ role: data.role }).where(eq(users.id, data.id))
+    return { ok: true }
+  })
+
 export const changePasswordFn = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) =>
     z.object({ id: z.string(), newPassword: z.string().min(6) }).parse(d),
