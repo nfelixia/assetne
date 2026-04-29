@@ -15,13 +15,22 @@ function formatDate(ts: number) {
 
 export function ProductionCheckInModal({
   item,
+  session,
   onClose,
 }: {
-  item: ProductionItemWithUsage
-  onClose: () => void
+  item:     ProductionItemWithUsage
+  session?: any
+  onClose:  () => void
 }) {
+  const canManage = session?.role === 'admin' || session?.role === 'gestor_patrimonio'
+
+  // Only show movements the user is allowed to return
+  const allowedMovements = canManage
+    ? item.activeMovements
+    : item.activeMovements.filter((m) => m.checkedOutByUserId === session?.id)
+
   const [selectedMovement, setSelectedMovement]   = useState<ProductionMovement | null>(
-    item.activeMovements.length === 1 ? item.activeMovements[0] : null,
+    allowedMovements.length === 1 ? allowedMovements[0] : null,
   )
   const [statusAfterReturn, setStatusAfterReturn] = useState<'bom' | 'regular' | 'ruim'>('bom')
   const [notes,             setNotes]             = useState('')
@@ -62,11 +71,20 @@ export function ProductionCheckInModal({
       </div>
 
       {/* Selecionar retirada se houver mais de uma */}
-      {item.activeMovements.length > 1 && (
+      {allowedMovements.length === 0 && (
+        <div
+          className="mb-4 rounded-lg p-3 text-[12px]"
+          style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}
+        >
+          Você não tem retiradas ativas para devolver. Apenas o responsável ou um administrador pode devolver este item.
+        </div>
+      )}
+
+      {allowedMovements.length > 1 && (
         <div className="mb-3">
           <div className="mb-1.5 text-[12px] font-medium" style={{ color: '#8b949e' }}>Qual retirada devolver?</div>
           <div className="flex flex-col gap-1.5">
-            {item.activeMovements.map((m) => (
+            {allowedMovements.map((m) => (
               <button
                 key={m.id}
                 onClick={() => setSelectedMovement(m)}
@@ -133,9 +151,9 @@ export function ProductionCheckInModal({
 
       <ModalFooter
         onClose={onClose}
-        onConfirm={handleConfirm}
+        onConfirm={allowedMovements.length > 0 ? handleConfirm : undefined}
         confirmLabel="Registrar Devolução"
-        disabled={!selectedMovement}
+        disabled={!selectedMovement || allowedMovements.length === 0}
         loading={mutation.isPending}
       />
     </Modal>
