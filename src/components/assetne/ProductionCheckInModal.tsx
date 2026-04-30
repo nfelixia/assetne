@@ -22,7 +22,7 @@ export function ProductionCheckInModal({
   session?: any
   onClose:  () => void
 }) {
-  const canManage = session?.role === 'admin' || session?.role === 'gestor_patrimonio'
+  const canManage = session?.role === 'admin' || session?.role === 'produtor'
 
   // Only show movements the user is allowed to return
   const allowedMovements = canManage

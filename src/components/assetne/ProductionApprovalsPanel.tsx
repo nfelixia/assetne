@@ -51,7 +51,7 @@ function RequestCard({
   const [rejecting,    setRejecting]    = useState(false)
   const [rejectReason, setRejectReason] = useState('')
 
-  const canApprove = session.role === 'admin' || session.role === 'gestor_patrimonio'
+  const canApprove = session.role === 'admin' || session.role === 'produtor'
   const canCancel  = canApprove || req.requestedByUserId === session.id
   const badge      = STATUS_BADGE[req.status as ReqStatus] ?? STATUS_BADGE.pending_approval
 
@@ -240,7 +240,7 @@ export function ProductionApprovalsPanel({ session }: { session: SessionUser }) 
   const { data: requests } = useSuspenseQuery(productionQueries.withdrawalRequests())
   const { data: items    } = useSuspenseQuery(productionQueries.list())
 
-  const canApprove = session.role === 'admin' || session.role === 'gestor_patrimonio'
+  const canApprove = session.role === 'admin' || session.role === 'produtor'
 
   const [activeTab, setActiveTab] = useState<ReqStatus>('pending_approval')
 

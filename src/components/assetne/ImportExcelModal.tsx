@@ -6,7 +6,7 @@ import { useCreateClientMutation } from '~/lib/clients/queries'
 import { useCreateProductionItemMutation } from '~/lib/production/queries'
 import { useCreatePatrimonyItemMutation } from '~/lib/patrimony/queries'
 
-const MAX_IMPORT_ROWS = 200
+const BATCH_SIZE = 25
 
 type ImportType = 'equipment' | 'clients' | 'production' | 'patrimony'
 
@@ -124,6 +124,7 @@ export function ImportExcelModal({
   const [rows,        setRows]        = useState<ParsedRow[]>([])
   const [error,       setError]       = useState<string | null>(null)
   const [importing,   setImporting]   = useState(false)
+  const [progress,    setProgress]    = useState<{ done: number; total: number } | null>(null)
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -154,8 +155,7 @@ export function ImportExcelModal({
               condicao:  String(r['Condição'] || r['Condicao'] || r['condicao'] || r['condição'] || 'bom').trim(),
             }))
             .filter((r) => r.nome.length > 0)
-            .slice(0, MAX_IMPORT_ROWS)
-          setRows(parsed)
+                      setRows(parsed)
         } else if (type === 'production') {
           const parsed: ProdRow[] = json
             .map((r) => ({
@@ -169,8 +169,7 @@ export function ImportExcelModal({
               cor:         String(r['Cor'] || r['cor'] || r['COR'] || r['Color'] || r['color'] || '').trim() || undefined,
             }))
             .filter((r) => r.nome.length > 0)
-            .slice(0, MAX_IMPORT_ROWS)
-          setRows(parsed)
+                      setRows(parsed)
         } else if (type === 'patrimony') {
           let autoCode = 1
           const autoPrefix = `IMP${Date.now().toString().slice(-6)}`
@@ -187,16 +186,14 @@ export function ImportExcelModal({
               notas:             String(r['Notas'] || r['notas'] || r['Observações'] || '').trim() || undefined,
             }))
             .filter((r) => r.nome.length > 0)
-            .slice(0, MAX_IMPORT_ROWS)
-          setRows(parsed)
+                      setRows(parsed)
         } else {
           const parsed: ClientRow[] = json
             .map((r) => ({
               nome: String(r['Nome'] || r['nome'] || r['NOME'] || '').trim(),
             }))
             .filter((r) => r.nome.length > 0)
-            .slice(0, MAX_IMPORT_ROWS)
-          setRows(parsed)
+                      setRows(parsed)
         }
       } catch {
         setError('Não foi possível ler o arquivo. Use .xlsx ou .xls.')
@@ -207,69 +204,68 @@ export function ImportExcelModal({
 
   async function handleImport() {
     setImporting(true)
+    setProgress({ done: 0, total: rows.length })
     let success = 0
-    let failed = 0
+    let failed  = 0
+
+    async function runBatched<T>(items: T[], fn: (item: T) => Promise<void>) {
+      for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        const batch = items.slice(i, i + BATCH_SIZE)
+        for (const item of batch) {
+          try { await fn(item); success++ } catch { failed++ }
+          setProgress({ done: success + failed, total: rows.length })
+        }
+      }
+    }
+
     try {
       if (type === 'equipment') {
-        for (const row of rows as EquipRow[]) {
-          try {
-            await createEquip.mutateAsync({
-              name:         row.nome,
-              category:     row.categoria,
-              value:        row.valor,
-              serialNumber: row.serie,
-              condition:    normalizeCondition(row.condicao ?? ''),
-            })
-            success++
-          } catch { failed++ }
-        }
+        await runBatched(rows as EquipRow[], (row) =>
+          createEquip.mutateAsync({
+            name:         row.nome,
+            category:     row.categoria,
+            value:        row.valor,
+            serialNumber: row.serie,
+            condition:    normalizeCondition(row.condicao ?? ''),
+          }),
+        )
       } else if (type === 'production') {
-        for (const row of rows as ProdRow[]) {
-          try {
-            await createProd.mutateAsync({
-              name:          row.nome,
-              category:      row.categoria,
-              totalQty:      row.quantidade,
-              condition:     normalizeProdCondition(row.condicao ?? ''),
-              location:      row.localizacao,
-              codigoInterno: row.codigo,
-              notes:         row.notas,
-              color:         row.cor,
-            })
-            success++
-          } catch { failed++ }
-        }
+        await runBatched(rows as ProdRow[], (row) =>
+          createProd.mutateAsync({
+            name:          row.nome,
+            category:      row.categoria,
+            totalQty:      row.quantidade,
+            condition:     normalizeProdCondition(row.condicao ?? ''),
+            location:      row.localizacao,
+            codigoInterno: row.codigo,
+            notes:         row.notas,
+            color:         row.cor,
+          }),
+        )
       } else if (type === 'patrimony') {
-        for (const row of rows as PatRow[]) {
-          try {
-            const val = row.valor ? parseFloat(row.valor.replace(/[R$\s.]/g, '').replace(',', '.')) : null
-            await createPatrimony.mutateAsync({
-              name:           row.nome,
-              category:       row.categoria,
-              patrimonyCode:  row.codigoPatrimonial,
-              brand:          row.marca,
-              model:          row.modelo,
-              location:       row.localizacao,
-              condition:      normalizePatrimonyCondition(row.condicao ?? ''),
-              status:         'disponivel',
-              quantity:       1,
-              estimatedValue: val && !isNaN(val) ? val : null,
-              notes:          row.notas,
-            })
-            success++
-          } catch { failed++ }
-        }
+        await runBatched(rows as PatRow[], (row) => {
+          const val = row.valor ? parseFloat(row.valor.replace(/[R$\s.]/g, '').replace(',', '.')) : null
+          return createPatrimony.mutateAsync({
+            name:           row.nome,
+            category:       row.categoria,
+            patrimonyCode:  row.codigoPatrimonial,
+            brand:          row.marca,
+            model:          row.modelo,
+            location:       row.localizacao,
+            condition:      normalizePatrimonyCondition(row.condicao ?? ''),
+            status:         'disponivel',
+            quantity:       1,
+            estimatedValue: val && !isNaN(val) ? val : null,
+            notes:          row.notas,
+          })
+        })
       } else {
-        for (const row of rows as ClientRow[]) {
-          try {
-            await createClient.mutateAsync(row.nome)
-            success++
-          } catch { failed++ }
-        }
+        await runBatched(rows as ClientRow[], (row) => createClient.mutateAsync(row.nome))
       }
       setImportResult({ success, failed })
     } finally {
       setImporting(false)
+      setProgress(null)
     }
   }
 
@@ -416,11 +412,26 @@ export function ImportExcelModal({
               {rows.length > 20 && (
                 <div className="px-3 py-2 text-[11px] text-[#6e7681]">
                   + {rows.length - 20} linha(s) adicionais
-                  {rows.length >= MAX_IMPORT_ROWS && (
-                    <span className="ml-1 text-[#f59e0b]">(limite de {MAX_IMPORT_ROWS} linhas aplicado)</span>
-                  )}
                 </div>
               )}
+            </div>
+          )}
+
+          {importing && progress && (
+            <div className="mb-3">
+              <div className="mb-1 flex justify-between text-[11px]" style={{ color: '#8b949e' }}>
+                <span>Importando...</span>
+                <span>{progress.done}/{progress.total}</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    background: 'linear-gradient(90deg, #2563eb, #1d4ed8)',
+                    width: `${Math.round((progress.done / progress.total) * 100)}%`,
+                  }}
+                />
+              </div>
             </div>
           )}
 

@@ -36,7 +36,7 @@ export function ProductionCheckOutModal({
   session: SessionUser
   onClose: () => void
 }) {
-  const canDirectCheckout = session.role === 'admin' || session.role === 'gestor_patrimonio'
+  const canDirectCheckout = session.role === 'admin' || session.role === 'produtor'
 
   const [qty,            setQty]            = useState(1)
   const [responsibleId,  setResponsibleId]  = useState(canDirectCheckout ? '' : session.id)

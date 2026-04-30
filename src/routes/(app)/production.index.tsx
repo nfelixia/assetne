@@ -19,6 +19,7 @@ import { ProductionSkeleton } from '~/components/assetne/Skeleton'
 import { ImportExcelModal } from '~/components/assetne/ImportExcelModal'
 import { PROD_CAT_ICON } from '~/components/assetne/utils'
 import { normalizeText } from '~/utils/format'
+import { ColorBadge } from '~/components/assetne/ColorBadge'
 
 export const Route = createFileRoute('/(app)/production/')({
   component: ProductionPage,
@@ -65,9 +66,9 @@ function ProductionPage() {
   const { data: requests } = useSuspenseQuery(productionQueries.withdrawalRequests())
   const { data: movements } = useSuspenseQuery(productionQueries.movements())
 
-  const isAdmin            = session?.role === 'admin'
-  const isGestorPatrimonio = session?.role === 'gestor_patrimonio'
-  const canManage          = isAdmin || isGestorPatrimonio
+  const isAdmin    = session?.role === 'admin'
+  const isProdutor = session?.role === 'produtor'
+  const canManage  = isAdmin || isProdutor
 
   const [tab,          setTab]          = useState<PageTab>('items')
   const [search,       setSearch]       = useState('')
@@ -79,6 +80,8 @@ function ProductionPage() {
   const [checkinItem,  setCheckinItem]  = useState<ProductionItemWithUsage | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ProductionItemWithUsage | null>(null)
   const [lightbox,     setLightbox]     = useState<{ src: string; alt: string } | null>(null)
+  const [page,         setPage]         = useState(1)
+  const [pageSize,     setPageSize]     = useState(50)
 
   const pendingCount = requests.filter((r) => r.status === 'pending_approval').length
 
@@ -89,7 +92,7 @@ function ProductionPage() {
   const totalAvailQty = items.reduce((s, i) => s + i.availableQty, 0)
   const totalUsedQty  = items.reduce((s, i) => s + i.usedQty, 0)
 
-  // Filtered items
+  // Filtered + paginated items
   const filtered = items.filter((item) => {
     const q           = normalizeText(search)
     const matchSearch = !q || (
@@ -106,6 +109,10 @@ function ProductionPage() {
     if (filter === 'pendente')   return matchSearch && requests.some((r) => r.itemId === item.id && r.status === 'pending_approval')
     return matchSearch && item.status === filter
   })
+
+  const totalFiltered = filtered.length
+  const totalPages    = Math.max(1, Math.ceil(totalFiltered / pageSize))
+  const paginated     = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   // Export Excel
   function handleExport() {
@@ -166,24 +173,13 @@ function ProductionPage() {
           >
             ↓ Exportar
           </button>
-          {canManage && (
-            <button
-              onClick={() => setShowNew(true)}
-              className="rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all"
-              style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 16px rgba(37,99,235,0.3)' }}
-            >
-              + Novo item
-            </button>
-          )}
-          {!canManage && (
-            <button
-              onClick={() => setShowNew(true)}
-              className="rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all"
-              style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 16px rgba(37,99,235,0.3)' }}
-            >
-              + Novo item
-            </button>
-          )}
+          <button
+            onClick={() => setShowNew(true)}
+            className="rounded-lg px-4 py-2 text-[13px] font-semibold text-white transition-all"
+            style={{ background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', boxShadow: '0 4px 16px rgba(37,99,235,0.3)' }}
+          >
+            + Novo item
+          </button>
         </div>
       </div>
 
@@ -246,7 +242,7 @@ function ProductionPage() {
           <div className="mb-4 flex flex-wrap gap-2">
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               placeholder="Buscar por nome, categoria, cor, código, localização..."
               className="min-w-[200px] flex-1 rounded-lg px-3 py-2 text-[13px] outline-none transition-all"
               style={{ background: '#060c1a', border: '1px solid rgba(255,255,255,0.07)', color: '#eef2ff' }}
@@ -263,7 +259,7 @@ function ProductionPage() {
             ].map(([v, l]) => (
               <button
                 key={v}
-                onClick={() => setFilter(v)}
+                onClick={() => { setFilter(v); setPage(1) }}
                 className="rounded-lg px-3.5 py-1.5 text-[12px] font-medium transition-all"
                 style={
                   filter === v
@@ -302,11 +298,11 @@ function ProductionPage() {
                 <div className="text-right">Ações</div>
               </div>
 
-              {filtered.map((item, i) => (
+              {paginated.map((item, i) => (
                 <ProductionRow
                   key={item.id}
                   item={item}
-                  isLast={i === filtered.length - 1}
+                  isLast={i === paginated.length - 1}
                   canManage={canManage}
                   hasPending={requests.some((r) => r.itemId === item.id && r.status === 'pending_approval')}
                   session={session}
@@ -317,6 +313,46 @@ function ProductionPage() {
                   onImageClick={item.photoUrl ? () => setLightbox({ src: item.photoUrl!, alt: item.name }) : undefined}
                 />
               ))}
+            </div>
+          )}
+
+          {/* Paginação */}
+          {totalFiltered > pageSize && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-[12px]" style={{ color: '#4a6380' }}>
+                <span>
+                  {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalFiltered)} de {totalFiltered} itens
+                </span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
+                  className="rounded-md px-2 py-0.5 text-[12px] outline-none"
+                  style={{ background: '#060c1a', border: '1px solid rgba(255,255,255,0.07)', color: '#8ba4bf' }}
+                >
+                  {[25, 50, 100].map((n) => <option key={n} value={n}>{n}/pág.</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-30"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#8ba4bf' }}
+                >
+                  ‹
+                </button>
+                <span className="px-2 text-[12px]" style={{ color: '#4a6380' }}>
+                  {page} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="rounded-lg px-3 py-1.5 text-[13px] disabled:opacity-30"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#8ba4bf' }}
+                >
+                  ›
+                </button>
+              </div>
             </div>
           )}
         </>
@@ -438,14 +474,7 @@ function ProductionRow({
                 #{item.codigoInterno}
               </span>
             )}
-            {item.color && (
-              <span
-                className="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                style={{ background: 'rgba(139,164,191,0.1)', border: '1px solid rgba(139,164,191,0.15)', color: '#8ba4bf' }}
-              >
-                {item.color.charAt(0).toUpperCase() + item.color.slice(1).toLowerCase()}
-              </span>
-            )}
+            {item.color && <ColorBadge color={item.color} />}
             {item.location && <span>{item.location}</span>}
             <span className="sm:hidden">{item.category}</span>
           </div>

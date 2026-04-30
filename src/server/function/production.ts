@@ -18,8 +18,8 @@ async function getCurrentSession() {
   return verifySessionToken(token)
 }
 
-function isProductionApprover(role: string) {
-  return role === 'admin' || role === 'gestor_patrimonio'
+function isProductionOperator(role: string) {
+  return role === 'admin' || role === 'produtor'
 }
 
 // ─── Item CRUD ────────────────────────────────────────────────────────────────
@@ -178,8 +178,8 @@ export const checkOutProductionItem = createServerFn({ method: 'POST' })
   .inputValidator((d: unknown) => checkoutSchema.parse(d))
   .handler(async ({ data }) => {
     const session = await getCurrentSession()
-    if (!session || !isProductionApprover(session.role)) {
-      throw new Error('Apenas administradores e gestores podem registrar saída direta.')
+    if (!session || !isProductionOperator(session.role)) {
+      throw new Error('Apenas administradores e produtores podem registrar saída direta.')
     }
 
     const [item] = await db.select().from(productionItems).where(eq(productionItems.id, data.itemId))
@@ -294,7 +294,7 @@ export const getProductionWithdrawalRequests = createServerFn({ method: 'GET' })
   const session = await getCurrentSession()
   if (!session) throw new Error('Sessão inválida')
 
-  if (isProductionApprover(session.role)) {
+  if (isProductionOperator(session.role)) {
     return db
       .select()
       .from(productionWithdrawalRequests)
@@ -312,7 +312,7 @@ export const approveProductionWithdrawalRequest = createServerFn({ method: 'POST
   .inputValidator((d: unknown) => z.object({ requestId: z.string() }).parse(d))
   .handler(async ({ data }) => {
     const session = await getCurrentSession()
-    if (!session || !isProductionApprover(session.role)) {
+    if (!session || !isProductionOperator(session.role)) {
       throw new Error('Sem permissão para aprovar solicitações')
     }
 
@@ -379,7 +379,7 @@ export const rejectProductionWithdrawalRequest = createServerFn({ method: 'POST'
   )
   .handler(async ({ data }) => {
     const session = await getCurrentSession()
-    if (!session || !isProductionApprover(session.role)) {
+    if (!session || !isProductionOperator(session.role)) {
       throw new Error('Sem permissão para recusar solicitações')
     }
 
@@ -438,7 +438,7 @@ export const cancelProductionWithdrawalRequest = createServerFn({ method: 'POST'
     if (!req) throw new Error('Solicitação não encontrada')
     if (req.status !== 'pending_approval') throw new Error('Solicitação não está pendente')
 
-    if (!isProductionApprover(session.role) && req.requestedByUserId !== session.id) {
+    if (!isProductionOperator(session.role) && req.requestedByUserId !== session.id) {
       throw new Error('Sem permissão para cancelar esta solicitação')
     }
 
@@ -491,7 +491,7 @@ export const checkInProductionItem = createServerFn({ method: 'POST' })
     if (!movement) throw new Error('Movimento não encontrado')
     if (movement.checkedInAt) throw new Error('Item já devolvido')
 
-    if (!isProductionApprover(session.role) && movement.checkedOutByUserId !== session.id) {
+    if (!isProductionOperator(session.role) && movement.checkedOutByUserId !== session.id) {
       throw new Error('Apenas o responsável pela retirada ou um administrador pode realizar a devolução.')
     }
 
