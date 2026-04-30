@@ -519,59 +519,60 @@ function ProductionRow({
       {/* Ações — desktop */}
       <div className="ml-auto hidden sm:flex items-center justify-end gap-1">
         {hasAvail && (
-          <ActionBtn
-            title={canManage ? 'Registrar retirada' : 'Solicitar retirada'}
+          <button
             onClick={(e) => { e.stopPropagation(); onCheckOut() }}
-            hoverColor="#3b82f6"
-            hoverBg="rgba(59,130,246,0.1)"
+            className="rounded-md px-2 py-1 text-[11px] font-medium transition-colors"
+            style={{ color: canManage ? '#3b82f6' : '#8b5cf6' }}
           >
-            ↑
-          </ActionBtn>
+            {canManage ? 'Retirar' : 'Solicitar'}
+          </button>
         )}
         {hasInUse && (
-          <ActionBtn
-            title="Registrar devolução"
+          <button
             onClick={(e) => { e.stopPropagation(); onCheckIn() }}
-            hoverColor="#10b981"
-            hoverBg="rgba(16,185,129,0.1)"
+            className="rounded-md px-2 py-1 text-[11px] font-medium transition-colors"
+            style={{ color: '#10b981' }}
           >
-            ↓
-          </ActionBtn>
+            Devolver
+          </button>
         )}
-        <ActionBtn title="Editar" onClick={(e) => { e.stopPropagation(); onEdit() }}>✎</ActionBtn>
+        <button
+          onClick={(e) => { e.stopPropagation(); onEdit() }}
+          className="rounded-md px-2 py-1 text-[11px] transition-colors"
+          style={{ color: '#3b5a7a' }}
+        >
+          Editar
+        </button>
         {item.usedQty === 0 && canManage && (
-          <ActionBtn
-            title="Excluir"
+          <button
             onClick={(e) => { e.stopPropagation(); onRequestDelete() }}
-            hoverColor="#ef4444"
-            hoverBg="rgba(239,68,68,0.1)"
+            className="rounded-md px-2 py-1 text-[11px] transition-colors"
+            style={{ color: '#ef4444' }}
           >
-            ✕
-          </ActionBtn>
+            Excluir
+          </button>
         )}
       </div>
 
       {/* Ações — mobile */}
       <div className="ml-auto flex items-center gap-1 sm:hidden">
         {hasAvail && (
-          <ActionBtn
-            title="Retirada"
+          <button
             onClick={(e) => { e.stopPropagation(); onCheckOut() }}
-            hoverColor="#3b82f6"
-            hoverBg="rgba(59,130,246,0.1)"
+            className="rounded-md px-2 py-1 text-[11px] font-medium transition-colors"
+            style={{ color: canManage ? '#3b82f6' : '#8b5cf6' }}
           >
-            ↑
-          </ActionBtn>
+            {canManage ? 'Retirar' : 'Solicitar'}
+          </button>
         )}
         {hasInUse && (
-          <ActionBtn
-            title="Devolução"
+          <button
             onClick={(e) => { e.stopPropagation(); onCheckIn() }}
-            hoverColor="#10b981"
-            hoverBg="rgba(16,185,129,0.1)"
+            className="rounded-md px-2 py-1 text-[11px] font-medium transition-colors"
+            style={{ color: '#10b981' }}
           >
-            ↓
-          </ActionBtn>
+            Devolver
+          </button>
         )}
       </div>
     </div>
@@ -722,30 +723,3 @@ function ConfirmDeleteModal({ item, onClose }: { item: ProductionItemWithUsage; 
   )
 }
 
-// ─── Action Button ────────────────────────────────────────────────────────────
-
-function ActionBtn({
-  children, onClick, title, disabled,
-  hoverColor = '#8ba4bf', hoverBg = 'rgba(255,255,255,0.06)',
-}: {
-  children: React.ReactNode
-  onClick: (e: React.MouseEvent) => void
-  title?: string
-  disabled?: boolean
-  hoverColor?: string
-  hoverBg?: string
-}) {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      disabled={disabled}
-      className="rounded px-1.5 py-0.5 text-[12px] transition-colors disabled:opacity-40"
-      style={{ color: '#4a6380' }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = hoverBg; e.currentTarget.style.color = hoverColor }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#4a6380' }}
-    >
-      {children}
-    </button>
-  )
-}
