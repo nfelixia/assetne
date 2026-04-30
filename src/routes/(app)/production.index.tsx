@@ -19,6 +19,7 @@ import { ImportExcelModal }          from '~/components/assetne/ImportExcelModal
 import { PROD_CAT_ICON }             from '~/components/assetne/utils'
 import { normalizeText }             from '~/utils/format'
 import { ColorBadge }                from '~/components/assetne/ColorBadge'
+import { ProductionDetailModal }    from '~/components/assetne/ProductionDetailModal'
 
 export const Route = createFileRoute('/(app)/production/')({
   component: ProductionPage,
@@ -89,6 +90,7 @@ function ProductionPage() {
   const [checkoutItem, setCheckoutItem] = useState<ProductionItemWithUsage | null>(null)
   const [checkinItem,  setCheckinItem]  = useState<ProductionItemWithUsage | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ProductionItemWithUsage | null>(null)
+  const [detailItem,   setDetailItem]   = useState<ProductionItemWithUsage | null>(null)
   const [lightbox,     setLightbox]     = useState<{ src: string; alt: string } | null>(null)
   const [page,         setPage]         = useState(1)
   const [pageSize,     setPageSize]     = useState(50)
@@ -322,6 +324,7 @@ function ProductionPage() {
                         canManage={canManage}
                         hasPending={requests.some((r) => r.itemId === item.id && r.status === 'pending_approval')}
                         session={session}
+                        onDetail={() => setDetailItem(item)}
                         onEdit={() => setEditItem(item)}
                         onCheckOut={() => setCheckoutItem(item)}
                         onCheckIn={() => setCheckinItem(item)}
@@ -397,6 +400,18 @@ function ProductionPage() {
       {checkinItem  && <ProductionCheckInModal item={checkinItem} session={session} onClose={() => setCheckinItem(null)} />}
       {lightbox     && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
       {deleteTarget && <ConfirmDeleteModal item={deleteTarget} onClose={() => setDeleteTarget(null)} />}
+      {detailItem   && (
+        <ProductionDetailModal
+          item={detailItem}
+          movements={movements}
+          canManage={canManage}
+          hasPending={requests.some((r) => r.itemId === detailItem.id && r.status === 'pending_approval')}
+          onEdit={() => { setEditItem(detailItem); setDetailItem(null) }}
+          onCheckOut={() => { setCheckoutItem(detailItem); setDetailItem(null) }}
+          onCheckIn={() => { setCheckinItem(detailItem); setDetailItem(null) }}
+          onClose={() => setDetailItem(null)}
+        />
+      )}
     </div>
   )
 }
@@ -434,6 +449,7 @@ function ProductionRow({
   isLast,
   canManage,
   hasPending,
+  onDetail,
   onEdit,
   onCheckOut,
   onCheckIn,
@@ -445,6 +461,7 @@ function ProductionRow({
   canManage:       boolean
   hasPending:      boolean
   session:         any
+  onDetail:        () => void
   onEdit:          () => void
   onCheckOut:      () => void
   onCheckIn:       () => void
@@ -476,7 +493,13 @@ function ProductionRow({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-[13px] font-medium" style={{ color: '#eef2ff' }}>{item.name}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDetail() }}
+                className="text-[13px] font-medium text-left transition-colors hover:underline"
+                style={{ color: '#eef2ff' }}
+              >
+                {item.name}
+              </button>
               {hasPending && (
                 <span
                   className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
