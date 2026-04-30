@@ -388,7 +388,10 @@ function EquipmentsPage() {
       {tab === 'in_use' && (
         <InUsePanel
           items={inUseItems}
-          onCheckIn={(eq) => setCheckinItem(eq)}
+          onCheckIn={(eq) => {
+            if (eq) setCheckinItem(eq)
+            else setShowCheckin(true)
+          }}
         />
       )}
 
@@ -618,6 +621,60 @@ function EquipRow({
   )
 }
 
+// ─── Em Uso Panel — helpers ──────────────────────────────────────────────────
+
+type InUseGroup = {
+  responsible:        string
+  responsibleRole:    string | null
+  checkedOutByUserId: string | null
+  items:              EquipmentWithCheckout[]
+  projects:           string[]
+  earliestReturn:     string | null
+  deadlineStatus:     'late' | 'today' | 'ok' | null
+  checkedOutAt:       number
+}
+
+function buildGroups(items: EquipmentWithCheckout[]): InUseGroup[] {
+  const map = new Map<string, InUseGroup>()
+  for (const eq of items) {
+    const c   = eq.activeCheckout!
+    const key = c.responsible.toLowerCase().trim()
+    if (!map.has(key)) {
+      map.set(key, {
+        responsible:        c.responsible,
+        responsibleRole:    c.responsibleRole,
+        checkedOutByUserId: c.checkedOutByUserId,
+        items:              [],
+        projects:           [],
+        earliestReturn:     null,
+        deadlineStatus:     null,
+        checkedOutAt:       c.checkedOutAt,
+      })
+    }
+    const g = map.get(key)!
+    g.items.push(eq)
+    if (c.project && !g.projects.includes(c.project)) g.projects.push(c.project)
+    if (c.expectedReturn && (!g.earliestReturn || c.expectedReturn < g.earliestReturn))
+      g.earliestReturn = c.expectedReturn
+    if (c.checkedOutAt < g.checkedOutAt) g.checkedOutAt = c.checkedOutAt
+  }
+  for (const g of map.values()) g.deadlineStatus = getDeadlineStatus(g.earliestReturn)
+  return [...map.values()].sort((a, b) => a.responsible.localeCompare(b.responsible))
+}
+
+function avatarColor(name: string) {
+  const palette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#f97316', '#ec4899']
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0
+  return palette[Math.abs(h) % palette.length]
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
 // ─── Em Uso Panel ─────────────────────────────────────────────────────────────
 
 function InUsePanel({
@@ -625,112 +682,212 @@ function InUsePanel({
   onCheckIn,
 }: {
   items:     EquipmentWithCheckout[]
-  onCheckIn: (eq: EquipmentWithCheckout) => void
+  onCheckIn: (eq: EquipmentWithCheckout | null) => void
 }) {
-  if (items.length === 0) {
+  const [search, setSearch] = useState('')
+  const groups   = buildGroups(items)
+  const filtered = groups.filter((g) => {
+    if (!search.trim()) return true
+    const q = normalizeText(search)
     return (
-      <div className="rounded-xl py-16 text-center" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
-        <div className="mb-2 text-[32px]">✓</div>
-        <div className="text-[14px] font-medium" style={{ color: '#2b4266' }}>
-          Nenhum equipamento em uso no momento
-        </div>
-      </div>
+      normalizeText(g.responsible).includes(q) ||
+      g.projects.some((p) => normalizeText(p).includes(q)) ||
+      g.items.some(
+        (eq) =>
+          normalizeText(eq.name).includes(q) ||
+          (eq.codigo ? normalizeText(eq.codigo).includes(q) : false),
+      )
     )
+  })
+
+  return (
+    <div>
+      {/* Cabeçalho da seção */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="text-[14px] font-semibold" style={{ color: '#d6e4f0' }}>Em uso agora</span>
+          {groups.length > 0 && (
+            <span
+              className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+              style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}
+            >
+              {groups.length} {groups.length === 1 ? 'responsável' : 'responsáveis'} · {items.length} {items.length === 1 ? 'item' : 'itens'}
+            </span>
+          )}
+        </div>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar responsável, projeto, item..."
+          className="w-full rounded-lg px-3 py-2 text-[13px] outline-none transition-all sm:w-[260px]"
+          style={{ background: '#060c1a', border: '1px solid rgba(255,255,255,0.07)', color: '#eef2ff' }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = '#2563eb')}
+          onBlur={(e)  => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)')}
+        />
+      </div>
+
+      {/* Estados */}
+      {items.length === 0 ? (
+        <div className="rounded-xl py-16 text-center" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div className="mb-2 text-[32px]">✓</div>
+          <div className="text-[14px] font-medium" style={{ color: '#2b4266' }}>
+            Nenhum equipamento em uso no momento
+          </div>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-xl py-10 text-center" style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
+          <div className="text-[13px]" style={{ color: '#2b4266' }}>
+            Nenhum resultado para "{search}"
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((group) => (
+            <InUseCard key={group.responsible} group={group} onCheckIn={onCheckIn} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Em Uso Card ──────────────────────────────────────────────────────────────
+
+function InUseCard({
+  group,
+  onCheckIn,
+}: {
+  group:     InUseGroup
+  onCheckIn: (eq: EquipmentWithCheckout | null) => void
+}) {
+  const color     = avatarColor(group.responsible)
+  const initials  = getInitials(group.responsible)
+  const daysSince = Math.floor((Date.now() - group.checkedOutAt) / 86_400_000)
+
+  const deadlineStyle =
+    group.deadlineStatus === 'late'  ? { background: 'rgba(239,68,68,0.12)',   color: '#ef4444' } :
+    group.deadlineStatus === 'today' ? { background: 'rgba(245,158,11,0.12)', color: '#f59e0b' } :
+                                        { background: 'rgba(16,185,129,0.1)',  color: '#10b981' }
+
+  function handleDevolver() {
+    onCheckIn(group.items.length === 1 ? group.items[0] : null)
   }
 
   return (
-    <div className="space-y-2">
-      {items.map((eq) => {
-        const icon     = CAT_ICON[eq.category] ?? '📦'
-        const c        = eq.activeCheckout!
-        const deadline = getDeadlineStatus(c.expectedReturn)
-        const daysSince = Math.floor((Date.now() - c.checkedOutAt) / 86_400_000)
-
-        return (
+    <div
+      className="flex flex-col rounded-xl"
+      style={{ background: '#0a0f1d', border: '1px solid rgba(255,255,255,0.07)' }}
+    >
+      {/* ── Header: avatar + nome + badge ── */}
+      <div className="flex items-start justify-between gap-3 p-4 pb-3">
+        <div className="flex min-w-0 items-center gap-3">
           <div
-            key={eq.id}
-            className="flex flex-wrap items-center gap-4 rounded-xl px-4 py-3"
-            style={{ background: '#0a0f1d', border: '1px solid rgba(255,255,255,0.05)' }}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+            style={{ background: color, boxShadow: `0 0 0 2px ${color}33` }}
           >
-            {/* Ícone */}
-            <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg"
-              style={{ background: '#060c1a', border: '1px solid rgba(255,255,255,0.07)' }}
-            >
-              {eq.photoUrl ? (
-                <img src={eq.photoUrl} alt={eq.name} className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-[16px]">{icon}</span>
-              )}
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-[13px] font-semibold" style={{ color: '#eef2ff' }}>
+              {group.responsible}
             </div>
-
-            {/* Nome + código */}
-            <div className="min-w-[130px] flex-1">
-              <Link
-                to="/equipments/$equipmentId"
-                params={{ equipmentId: eq.id }}
-                className="text-[13px] font-medium hover:underline"
-                style={{ color: '#eef2ff' }}
-              >
-                {eq.name}
-              </Link>
-              {eq.codigo && (
-                <div className="text-[11px]" style={{ color: '#58a6ff', fontFamily: "'JetBrains Mono', monospace" }}>
-                  #{eq.codigo}
-                </div>
-              )}
-            </div>
-
-            {/* Responsável + Projeto */}
-            <div className="min-w-[110px]">
-              <div className="text-[12px] font-medium" style={{ color: '#d6e4f0' }}>{c.responsible}</div>
-              {c.project && <div className="text-[11px]" style={{ color: '#4a6380' }}>{c.project}</div>}
-            </div>
-
-            {/* Saída */}
-            <div className="text-[11px]" style={{ color: '#4a6380' }}>
-              <div>Saída: <span style={{ color: '#8ba4bf' }}>{fmtDateOnly(c.checkedOutAt)}</span></div>
-              <div style={{ color: '#3b5a7a' }}>{daysSince === 0 ? 'Hoje' : `há ${daysSince}d`}</div>
-            </div>
-
-            {/* Prazo */}
-            {c.expectedReturn && (
-              <div>
-                <div className="mb-0.5 text-[10px] uppercase tracking-wider" style={{ color: '#3b5a7a' }}>Devolução</div>
-                <span
-                  className="rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
-                  style={
-                    deadline === 'late'  ? { background: 'rgba(239,68,68,0.12)',   color: '#ef4444' } :
-                    deadline === 'today' ? { background: 'rgba(245,158,11,0.12)', color: '#f59e0b' } :
-                                           { background: 'rgba(16,185,129,0.1)',  color: '#10b981' }
-                  }
-                >
-                  {deadline === 'late' ? '⚠ Atrasado' : deadline === 'today' ? 'Vence hoje' : c.expectedReturn}
-                </span>
-              </div>
-            )}
-
-            {/* Ações */}
-            <div className="ml-auto flex items-center gap-1.5">
-              <button
-                onClick={() => onCheckIn(eq)}
-                className="rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all"
-                style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981' }}
-              >
-                Devolver
-              </button>
-              <Link
-                to="/equipments/$equipmentId"
-                params={{ equipmentId: eq.id }}
-                className="rounded-lg px-3 py-1.5 text-[12px] transition-all"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#8ba4bf' }}
-              >
-                Detalhes
-              </Link>
+            <div className="truncate text-[11px]" style={{ color: '#4a6380' }}>
+              {group.responsibleRole ?? (daysSince === 0 ? 'Retirou hoje' : `há ${daysSince}d`)}
             </div>
           </div>
-        )
-      })}
+        </div>
+        <span
+          className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+          style={{ background: `${color}1a`, color, border: `1px solid ${color}30` }}
+        >
+          {group.items.length} {group.items.length === 1 ? 'item' : 'itens'}
+        </span>
+      </div>
+
+      {/* ── Divisor ── */}
+      <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '0 16px' }} />
+
+      {/* ── Projeto + prazo ── */}
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="shrink-0 text-[12px]" style={{ color: '#3b5a7a' }}>📁</span>
+          {group.projects.length > 0 ? (
+            <span className="truncate text-[12px]" style={{ color: '#8ba4bf' }}>
+              {group.projects.length === 1
+                ? group.projects[0]
+                : `${group.projects[0]} +${group.projects.length - 1}`}
+            </span>
+          ) : (
+            <span className="text-[12px]" style={{ color: '#2b4266' }}>Sem projeto</span>
+          )}
+        </div>
+        {group.earliestReturn && (
+          <span
+            className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
+            style={deadlineStyle}
+          >
+            📅{' '}
+            {group.deadlineStatus === 'late'
+              ? 'Atrasado'
+              : group.deadlineStatus === 'today'
+              ? 'Hoje'
+              : group.earliestReturn}
+          </span>
+        )}
+      </div>
+
+      {/* ── Chips dos equipamentos ── */}
+      <div className="flex flex-wrap gap-1.5 px-4 pb-3">
+        {group.items.map((eq) => {
+          const icon = CAT_ICON[eq.category] ?? '📦'
+          return (
+            <Link
+              key={eq.id}
+              to="/equipments/$equipmentId"
+              params={{ equipmentId: eq.id }}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-all hover:opacity-75"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border:     '1px solid rgba(255,255,255,0.08)',
+                color:      '#8ba4bf',
+              }}
+            >
+              <span className="text-[11px]">{icon}</span>
+              <span className="max-w-[120px] truncate">{eq.name}</span>
+              {eq.codigo && (
+                <span style={{ color: '#4a6380', fontFamily: "'JetBrains Mono', monospace", fontSize: '10px' }}>
+                  #{eq.codigo}
+                </span>
+              )}
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* ── Divisor ── */}
+      <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)' }} />
+
+      {/* ── Footer: tempo + ação ── */}
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+        <span className="text-[11px]" style={{ color: '#3b5a7a' }}>
+          {group.responsibleRole
+            ? `${group.responsibleRole} · ${daysSince === 0 ? 'hoje' : `há ${daysSince}d`}`
+            : daysSince === 0
+            ? 'Retirou hoje'
+            : `Retirou há ${daysSince}d`}
+        </span>
+        <button
+          onClick={handleDevolver}
+          className="rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all hover:opacity-80"
+          style={{
+            background: 'rgba(16,185,129,0.1)',
+            border:     '1px solid rgba(16,185,129,0.25)',
+            color:      '#10b981',
+          }}
+        >
+          Devolver
+        </button>
+      </div>
     </div>
   )
 }
