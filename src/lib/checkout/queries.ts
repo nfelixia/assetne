@@ -2,6 +2,8 @@ import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query
 import { toast } from 'sonner'
 import { createCheckout, createCheckin, getCheckoutHistory } from '~/server/function/checkout'
 
+export type CheckoutRecord = Awaited<ReturnType<typeof getCheckoutHistory>>[number]
+
 export const checkoutHistoryQuery = () =>
   queryOptions({
     queryKey: ['checkout-history'],
