@@ -1,6 +1,21 @@
 import type { ReactNode } from 'react'
 import { motion } from 'motion/react'
 
+/** Shared enter/exit presets for overlays. Exit only plays inside <AnimatePresence>. */
+export const backdropMotion = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: { duration: 0.18 },
+} as const
+
+export const panelMotion = {
+  initial: { opacity: 0, y: 24, scale: 0.98 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: 16, scale: 0.98, transition: { duration: 0.15, ease: 'easeIn' } },
+  transition: { type: 'spring', stiffness: 420, damping: 34 },
+} as const
+
 export function Modal({
   title,
   onClose,
@@ -17,15 +32,11 @@ export function Modal({
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
       style={{ background: 'rgba(4,7,16,0.7)', backdropFilter: 'blur(6px)' }}
       onClick={onClose}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.18 }}
+      {...backdropMotion}
     >
       <motion.div
         onClick={(e) => e.stopPropagation()}
-        initial={{ opacity: 0, y: 24, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+        {...panelMotion}
         className="w-full overflow-y-auto rounded-t-2xl sm:rounded-xl"
         style={{
           maxHeight: '92dvh',

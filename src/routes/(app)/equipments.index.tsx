@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { AnimatePresence, motion } from 'motion/react'
+import { backdropMotion, panelMotion } from '~/components/assetne/Modal'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import * as XLSX from 'xlsx'
@@ -401,28 +403,32 @@ function EquipmentsPage() {
       )}
 
       {/* ── Modals ── */}
-      {showNew      && <NewEquipModal onClose={() => setShowNew(false)} />}
-      {showImport   && <ImportExcelModal type="equipment" onClose={() => setShowImport(false)} />}
-      {editItem     && <EditEquipModal equipment={editItem} onClose={() => setEditItem(null)} />}
-      {qrItem       && <EquipQRModal equipment={qrItem} onClose={() => setQrItem(null)} />}
-      {lightbox     && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
-      {deleteTarget && <ConfirmDeleteModal equipment={deleteTarget} onClose={() => setDeleteTarget(null)} />}
+      <AnimatePresence>{showNew && <NewEquipModal onClose={() => setShowNew(false)} />}</AnimatePresence>
+      <AnimatePresence>{showImport && <ImportExcelModal type="equipment" onClose={() => setShowImport(false)} />}</AnimatePresence>
+      <AnimatePresence>{editItem && <EditEquipModal equipment={editItem} onClose={() => setEditItem(null)} />}</AnimatePresence>
+      <AnimatePresence>{qrItem && <EquipQRModal equipment={qrItem} onClose={() => setQrItem(null)} />}</AnimatePresence>
+      <AnimatePresence>{lightbox && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}</AnimatePresence>
+      <AnimatePresence>{deleteTarget && <ConfirmDeleteModal equipment={deleteTarget} onClose={() => setDeleteTarget(null)} />}</AnimatePresence>
 
-      {(showCheckout || checkoutItem) && (
-        <CheckOutModal
-          equipment={equipment}
-          preSelectedId={checkoutItem?.id}
-          onClose={() => { setShowCheckout(false); setCheckoutItem(null) }}
-        />
-      )}
-      {(showCheckin || checkinItem) && (
-        <CheckInModal
-          equipment={equipment}
-          preSelectedId={checkinItem?.id}
-          session={session}
-          onClose={() => { setShowCheckin(false); setCheckinItem(null) }}
-        />
-      )}
+      <AnimatePresence>
+        {(showCheckout || checkoutItem) && (
+          <CheckOutModal
+            equipment={equipment}
+            preSelectedId={checkoutItem?.id}
+            onClose={() => { setShowCheckout(false); setCheckoutItem(null) }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {(showCheckin || checkinItem) && (
+          <CheckInModal
+            equipment={equipment}
+            preSelectedId={checkinItem?.id}
+            session={session}
+            onClose={() => { setShowCheckin(false); setCheckinItem(null) }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -1011,12 +1017,14 @@ function ConfirmDeleteModal({
   const deleteMutation = useDeleteEquipmentMutation()
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={onClose}
+      {...backdropMotion}
     >
-      <div
+      <motion.div
         onClick={(e) => e.stopPropagation()}
+        {...panelMotion}
         className="w-full max-w-sm rounded-xl p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
         style={{ background: '#0e1628', border: '1px solid rgba(255,255,255,0.08)' }}
       >
@@ -1051,7 +1059,7 @@ function ConfirmDeleteModal({
             {deleteMutation.isPending ? 'Removendo...' : 'Sim, remover'}
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

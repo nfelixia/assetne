@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound, useNavigate } from '@tanstack/react-router'
+import { AnimatePresence } from 'motion/react'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { equipmentQueries, useSetAvailableMutation, useSetMaintenanceMutation, useDeleteEquipmentMutation, type EquipmentWithCheckout } from '~/lib/equipment/queries'
@@ -361,27 +362,35 @@ function EquipmentDetailPage() {
         </div>
       )}
 
-      {showEdit && (
-        <EditEquipModal equipment={eq} onClose={() => setShowEdit(false)} />
-      )}
-      {showCheckout && (
-        <CheckOutModal
-          equipment={equipment}
-          preSelectedId={eq.id}
-          onClose={() => setShowCheckout(false)}
-        />
-      )}
-      {showCheckin && (
-        <CheckInModal
-          equipment={equipment}
-          preSelectedId={eq.id}
-          session={session}
-          onClose={() => setShowCheckin(false)}
-        />
-      )}
-      {lightbox && eq.photoUrl && (
-        <ImageLightbox src={eq.photoUrl} alt={`Foto de ${eq.name}`} onClose={() => setLightbox(false)} />
-      )}
+      <AnimatePresence>
+        {showEdit && (
+          <EditEquipModal equipment={eq} onClose={() => setShowEdit(false)} />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showCheckout && (
+          <CheckOutModal
+            equipment={equipment}
+            preSelectedId={eq.id}
+            onClose={() => setShowCheckout(false)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showCheckin && (
+          <CheckInModal
+            equipment={equipment}
+            preSelectedId={eq.id}
+            session={session}
+            onClose={() => setShowCheckin(false)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {lightbox && eq.photoUrl && (
+          <ImageLightbox src={eq.photoUrl} alt={`Foto de ${eq.name}`} onClose={() => setLightbox(false)} />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
