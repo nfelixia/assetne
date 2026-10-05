@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { AnimatePresence } from 'motion/react'
 import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -385,7 +386,7 @@ function ClientsPanel() {
 
   return (
     <>
-      {showImport && <ImportExcelModal type="clients" onClose={() => setShowImport(false)} />}
+      <AnimatePresence>{showImport && <ImportExcelModal type="clients" onClose={() => setShowImport(false)} />}</AnimatePresence>
       <Panel
         title="Clientes"
         description="Clientes disponíveis para seleção nas saídas"

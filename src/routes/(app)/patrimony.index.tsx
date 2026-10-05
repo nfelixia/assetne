@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { AnimatePresence } from 'motion/react'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useState, Suspense } from 'react'
 import * as XLSX from 'xlsx'
@@ -381,43 +382,49 @@ function PatrimonyPage() {
       )}
 
       {/* Modals */}
-      {showNew && <NewPatrimonyModal onClose={() => setShowNew(false)} />}
+      <AnimatePresence>{showNew && <NewPatrimonyModal onClose={() => setShowNew(false)} />}</AnimatePresence>
 
-      {showImport && <ImportExcelModal type="patrimony" onClose={() => setShowImport(false)} />}
+      <AnimatePresence>{showImport && <ImportExcelModal type="patrimony" onClose={() => setShowImport(false)} />}</AnimatePresence>
 
-      {editItem && <EditPatrimonyModal item={editItem} onClose={() => setEditItem(null)} />}
+      <AnimatePresence>{editItem && <EditPatrimonyModal item={editItem} onClose={() => setEditItem(null)} />}</AnimatePresence>
 
-      {checkoutItem && (
-        <PatrimonyCheckOutModal
-          item={checkoutItem}
-          session={session}
-          onClose={() => setCheckoutItem(null)}
-        />
-      )}
+      <AnimatePresence>
+        {checkoutItem && (
+          <PatrimonyCheckOutModal
+            item={checkoutItem}
+            session={session}
+            onClose={() => setCheckoutItem(null)}
+          />
+        )}
+      </AnimatePresence>
 
-      {checkinItem && (
-        <PatrimonyCheckInModal
-          item={checkinItem}
-          isAdmin={isAdmin}
-          isGestorPatrimonio={isGestorPatrimonio}
-          currentUserId={session.id}
-          onClose={() => setCheckinItem(null)}
-        />
-      )}
-
-      {detailItem && (
-        <Suspense fallback={null}>
-          <PatrimonyDetailModal
-            item={detailItem}
+      <AnimatePresence>
+        {checkinItem && (
+          <PatrimonyCheckInModal
+            item={checkinItem}
             isAdmin={isAdmin}
             isGestorPatrimonio={isGestorPatrimonio}
-            onEdit={() => { setEditItem(detailItem); setDetailItem(null) }}
-            onCheckout={() => { setCheckoutItem(detailItem); setDetailItem(null) }}
-            onCheckin={() => { setCheckinItem(detailItem); setDetailItem(null) }}
-            onClose={() => setDetailItem(null)}
+            currentUserId={session.id}
+            onClose={() => setCheckinItem(null)}
           />
-        </Suspense>
-      )}
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {detailItem && (
+          <Suspense fallback={null}>
+            <PatrimonyDetailModal
+              item={detailItem}
+              isAdmin={isAdmin}
+              isGestorPatrimonio={isGestorPatrimonio}
+              onEdit={() => { setEditItem(detailItem); setDetailItem(null) }}
+              onCheckout={() => { setCheckoutItem(detailItem); setDetailItem(null) }}
+              onCheckin={() => { setCheckinItem(detailItem); setDetailItem(null) }}
+              onClose={() => setDetailItem(null)}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

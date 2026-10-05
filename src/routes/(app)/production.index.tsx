@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { AnimatePresence, motion } from 'motion/react'
+import { backdropMotion, panelMotion } from '~/components/assetne/Modal'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import * as XLSX from 'xlsx'
@@ -391,27 +393,31 @@ function ProductionPage() {
       )}
 
       {/* Modals */}
-      {showNew      && <NewProductionItemModal onClose={() => setShowNew(false)} />}
-      {showImport   && <ImportExcelModal type="production" onClose={() => setShowImport(false)} />}
-      {editItem     && <EditProductionItemModal item={editItem} onClose={() => setEditItem(null)} />}
-      {checkoutItem && session && (
-        <ProductionCheckOutModal item={checkoutItem} session={session} onClose={() => setCheckoutItem(null)} />
-      )}
-      {checkinItem  && <ProductionCheckInModal item={checkinItem} session={session} onClose={() => setCheckinItem(null)} />}
-      {lightbox     && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
-      {deleteTarget && <ConfirmDeleteModal item={deleteTarget} onClose={() => setDeleteTarget(null)} />}
-      {detailItem   && (
-        <ProductionDetailModal
-          item={detailItem}
-          movements={movements}
-          canManage={canManage}
-          hasPending={requests.some((r) => r.itemId === detailItem.id && r.status === 'pending_approval')}
-          onEdit={() => { setEditItem(detailItem); setDetailItem(null) }}
-          onCheckOut={() => { setCheckoutItem(detailItem); setDetailItem(null) }}
-          onCheckIn={() => { setCheckinItem(detailItem); setDetailItem(null) }}
-          onClose={() => setDetailItem(null)}
-        />
-      )}
+      <AnimatePresence>{showNew && <NewProductionItemModal onClose={() => setShowNew(false)} />}</AnimatePresence>
+      <AnimatePresence>{showImport && <ImportExcelModal type="production" onClose={() => setShowImport(false)} />}</AnimatePresence>
+      <AnimatePresence>{editItem && <EditProductionItemModal item={editItem} onClose={() => setEditItem(null)} />}</AnimatePresence>
+      <AnimatePresence>
+        {checkoutItem && session && (
+          <ProductionCheckOutModal item={checkoutItem} session={session} onClose={() => setCheckoutItem(null)} />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>{checkinItem && <ProductionCheckInModal item={checkinItem} session={session} onClose={() => setCheckinItem(null)} />}</AnimatePresence>
+      <AnimatePresence>{lightbox && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}</AnimatePresence>
+      <AnimatePresence>{deleteTarget && <ConfirmDeleteModal item={deleteTarget} onClose={() => setDeleteTarget(null)} />}</AnimatePresence>
+      <AnimatePresence>
+        {detailItem && (
+          <ProductionDetailModal
+            item={detailItem}
+            movements={movements}
+            canManage={canManage}
+            hasPending={requests.some((r) => r.itemId === detailItem.id && r.status === 'pending_approval')}
+            onEdit={() => { setEditItem(detailItem); setDetailItem(null) }}
+            onCheckOut={() => { setCheckoutItem(detailItem); setDetailItem(null) }}
+            onCheckIn={() => { setCheckinItem(detailItem); setDetailItem(null) }}
+            onClose={() => setDetailItem(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -710,12 +716,14 @@ function ConfirmDeleteModal({ item, onClose }: { item: ProductionItemWithUsage; 
   const deleteMutation = useDeleteProductionItemMutation()
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={onClose}
+      {...backdropMotion}
     >
-      <div
+      <motion.div
         onClick={(e) => e.stopPropagation()}
+        {...panelMotion}
         className="w-full max-w-sm rounded-xl p-6 shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
         style={{ background: '#0e1628', border: '1px solid rgba(255,255,255,0.08)' }}
       >
@@ -750,7 +758,7 @@ function ConfirmDeleteModal({ item, onClose }: { item: ProductionItemWithUsage; 
             {deleteMutation.isPending ? 'Removendo...' : 'Sim, remover'}
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

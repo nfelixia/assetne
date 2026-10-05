@@ -1,4 +1,5 @@
-import { Link, Outlet, createFileRoute, redirect, useRouter } from '@tanstack/react-router'
+import { Link, Outlet, createFileRoute, redirect, useRouter, useRouterState } from '@tanstack/react-router'
+import { MotionConfig, motion } from 'motion/react'
 import { toast } from 'sonner'
 import { getSessionFn, logoutFn } from '~/server/function/auth'
 import type { SessionUser } from '~/lib/auth/session'
@@ -37,6 +38,8 @@ const ROLE_LABEL: Record<string, string> = {
 function AppLayout() {
   const { session } = Route.useRouteContext() as { session: SessionUser }
   const router = useRouter()
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const isActive = (to: string) => pathname === to || pathname.startsWith(`${to}/`)
   const isAdmin             = session.role === 'admin'
   const isProdutor          = session.role === 'produtor'
   const isGestorPatrimonio  = session.role === 'gestor_patrimonio'
@@ -57,6 +60,7 @@ function AppLayout() {
   }
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="flex h-[100dvh] overflow-hidden bg-background text-foreground"
       style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
     >
@@ -91,11 +95,18 @@ function AppLayout() {
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex items-center gap-3 my-0.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 text-muted-foreground hover:bg-accent hover:text-accent-foreground [&.active]:bg-accent [&.active]:text-sidebar-primary"
+                className="relative flex items-center gap-3 my-0.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors duration-150 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground [&.active]:text-sidebar-primary"
                 activeProps={{ className: 'active' }}
               >
-                <Icon size={16} />
-                {item.label}
+                {isActive(item.to) && (
+                  <motion.span
+                    layoutId="nav-active"
+                    className="absolute inset-0 rounded-lg bg-accent"
+                    transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+                  />
+                )}
+                <span className="relative flex"><Icon size={16} /></span>
+                <span className="relative">{item.label}</span>
               </Link>
             )
           })}
@@ -198,7 +209,14 @@ function AppLayout() {
 
         {/* Page content */}
         <div className="flex-1 overflow-y-auto p-4 pb-24 md:p-7 md:pb-7">
-          <Outlet />
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Outlet />
+          </motion.div>
         </div>
       </main>
 
@@ -211,10 +229,19 @@ function AppLayout() {
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex flex-1 flex-col items-center justify-center gap-0.5 py-1 transition-colors text-muted-foreground [&.active]:text-sidebar-primary"
+                className="relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1 transition-colors text-muted-foreground [&.active]:text-sidebar-primary"
                 activeProps={{ className: 'active' }}
               >
-                <Icon size={20} />
+                {isActive(item.to) && (
+                  <motion.span
+                    layoutId="nav-active-mobile"
+                    className="absolute -top-1 h-0.5 w-8 rounded-full bg-sidebar-primary"
+                    transition={{ type: 'spring', stiffness: 500, damping: 38 }}
+                  />
+                )}
+                <motion.span whileTap={{ scale: 0.88 }} className="flex">
+                  <Icon size={20} />
+                </motion.span>
                 <span className="text-[10px] font-medium">{item.label.split(' ')[0]}</span>
               </Link>
             )
@@ -222,6 +249,7 @@ function AppLayout() {
         </div>
       </nav>
     </div>
+    </MotionConfig>
   )
 }
 

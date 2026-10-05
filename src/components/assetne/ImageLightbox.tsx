@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { motion } from 'motion/react'
+import { backdropMotion, panelMotion } from './Modal'
 
 export function ImageLightbox({
   src,
@@ -16,12 +18,14 @@ export function ImageLightbox({
   }, [onClose])
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-[60] flex items-center justify-center"
       style={{ background: 'rgba(4,7,16,0.88)', backdropFilter: 'blur(8px)' }}
       onClick={onClose}
+      {...backdropMotion}
     >
-      <img
+      <motion.img
+        {...panelMotion}
         src={src}
         alt={alt}
         className="max-h-[85vh] max-w-[88vw] rounded-xl object-contain shadow-2xl"
@@ -36,6 +40,6 @@ export function ImageLightbox({
       >
         ✕
       </button>
-    </div>
+    </motion.div>
   )
 }

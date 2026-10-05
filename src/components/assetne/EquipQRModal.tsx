@@ -1,5 +1,7 @@
 import { useRef } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
+import { motion } from 'motion/react'
+import { backdropMotion, panelMotion } from './Modal'
 
 interface Props {
   equipment: { id: string; name: string; category: string }
@@ -72,12 +74,14 @@ export function EquipQRModal({ equipment, onClose }: Props) {
   }
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm"
       onClick={onClose}
+      {...backdropMotion}
     >
-      <div
+      <motion.div
         onClick={(e) => e.stopPropagation()}
+        {...panelMotion}
         className="flex flex-col items-center gap-5 rounded-xl border border-white/10 bg-[#161b22] p-7 shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
       >
         <div className="text-center">
@@ -119,7 +123,7 @@ export function EquipQRModal({ equipment, onClose }: Props) {
             Fechar
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
