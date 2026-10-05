@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { motion } from 'motion/react'
 
 export function Modal({
   title,
@@ -12,13 +13,19 @@ export function Modal({
   width?: number
 }) {
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
       style={{ background: 'rgba(4,7,16,0.7)', backdropFilter: 'blur(6px)' }}
       onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.18 }}
     >
-      <div
+      <motion.div
         onClick={(e) => e.stopPropagation()}
+        initial={{ opacity: 0, y: 24, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
         className="w-full overflow-y-auto rounded-t-2xl sm:rounded-xl"
         style={{
           maxHeight: '92dvh',
@@ -52,8 +59,8 @@ export function Modal({
           </button>
         </div>
         {children}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
